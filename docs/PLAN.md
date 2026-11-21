@@ -1,6 +1,8 @@
 # План реализации: страница «График смен»
 
-> **Статус: этапы 1–8 реализованы** (см. README). Отличия от плана: черновик правок — это map `draft` (ячейка → значение | null), а не список `pendingOps`; URL БД — `file:./prisma/data/dev.db` (относительно корня проекта); SSR-prefetch не делался — данные грузятся Query на клиенте; в `.oxlintrc.json` отключены `react-perf/*` (React Compiler включён), добавлены точечные overrides. Перенос смены между ячейками — одной смены (не всего выделения).
+> **Это исходный план.** Актуальное устройство — в README и AGENTS.md, известные проблемы — в `docs/ANALYSIS.md`.
+>
+> **Статус: этапы 1–8 реализованы** (см. README). После плана добавлены: Postgres на проде (база выбирается по `DATABASE_URL`, SQLite остался для разработки), тесты Vitest и E2E на Playwright, адаптив 320/640/1200, главная с обзором проекта, Docker и CI. Отличия от плана: черновик правок — это map `draft` (ячейка → значение | null), а не список `pendingOps`; URL БД — `file:./prisma/data/dev.db` (относительно корня проекта); SSR-prefetch не делался — данные грузятся Query на клиенте; в `.oxlintrc.json` отключены `react-perf/*` (React Compiler включён), добавлены точечные overrides. Перенос смены между ячейками — одной смены (не всего выделения).
 >
 > **Расхождение с решением §10.1:** быстрое назначение по дате сейчас ставит смену только видимым сотрудникам (поиск сужает список). Должно ставить всем, поиск не влияет. Код ещё не приведён: `QuickAssignMenu` получает уже отфильтрованные `employeeIds`.
 
@@ -15,7 +17,7 @@ Next.js 16 (App Router) + React 19 + TS strict + Tailwind v4 + shadcn/ui. Сте
 | Виртуализация                             | `@tanstack/react-virtual`                                                                          | Список сотрудников (в макете строки обрезаются снизу — скролл) и 28–31 колонка в месяце                                        |
 | Drag-and-drop                             | `@dnd-kit/core`                                                                                    | Pointer/Touch/Keyboard sensors, DragOverlay, collision detection по ячейкам. Нативный HTML5 DnD хуже по a11y и тач-устройствам |
 | Даты                                      | `date-fns` (+ `ru` locale)                                                                         | Недели с пн, форматирование, диапазоны                                                                                         |
-| БД / ORM                                  | **Prisma 7** + SQLite (`@prisma/adapter-better-sqlite3`, `better-sqlite3`)                         | Типобезопасный доступ к данным, миграции, seed. Файл БД лежит в проекте                                                        |
+| БД / ORM                                  | **Prisma 7**: SQLite локально (`better-sqlite3`), Postgres на проде (`@prisma/adapter-pg`)         | Типобезопасный доступ к данным, миграции, seed. Изначально план был только на SQLite, Postgres добавлен для деплоя             |
 | Валидация                                 | `zod`                                                                                              | Единые схемы для API-роутов и «Своей смены», типы через `z.infer`. Отдельной form-библиотеки нет                               |
 | Тосты                                     | `sonner`                                                                                           | Результат сохранения/публикации, ошибки                                                                                        |
 | Меню/поповеры                             | shadcn: `popover`, `command`/`dropdown-menu`, `button`, `input`, `toggle-group`, `badge`, `avatar` | Быстрое назначение, переключатель Месяц/Неделя                                                                                 |
@@ -106,7 +108,7 @@ src/
   widgets/
     schedule-page/        # сборка страницы
   server/
-    db.ts                 # PrismaClient singleton (adapter better-sqlite3), server-only
+    db.ts                 # PrismaClient singleton, server-only (адаптер выбирает create-client.ts по DATABASE_URL)
     repositories/         # shifts, employees, templates, schedules — вся работа с Prisma
   generated/prisma/       # сгенерированный клиент (в .gitignore)
 ```
@@ -209,11 +211,11 @@ Schedule      { id, status: 'draft'|'published', updatedAt }
 
 ## 9. Вне объёма
 
-Авторизация, серверная БД (Postgres и т.п.), E2E/unit-тесты (Jest/Playwright не в `package.json` — по правилам проекта не добавляем без запроса; при необходимости — Vitest отдельным решением).
+Авторизация. Изначально вне объёма были и серверная БД, и тесты; позже добавлены Postgres для прода, Vitest и Playwright (см. README).
 
 ## 10. Решения
 
-1. **Быстрое назначение по дате — всем сотрудникам.** Поиск и виртуализация список не сужают. В коде пока наоборот: `QuickAssignMenu` получает отфильтрованные id.
+1. **Быстрое назначение по дате — всем сотрудникам.** Поиск и виртуализация список не сужают. В коде пока наоборот: `QuickAssignMenu` получает отфильтрованные id (`docs/ANALYSIS.md`, №3).
 2. **DnD между ячейками:** перемещение по умолчанию, копирование с `Alt`.
 3. **TanStack Table не нужен.** Сетка на Query + Virtual.
 4. **Токены из Figma уже выгружены** — `src/app/globals.css`.

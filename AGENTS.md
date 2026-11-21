@@ -48,6 +48,7 @@ Never commit `.env` or `prisma/data/*.db*`; the seed (`prisma/seed.ts`) is idemp
 - `src/entities/` — `employee`, `shift-template`, `shift`, `schedule`: `model` (types, zod schemas, store, helpers), `api` (queries), `ui`
 - `src/server/` — Prisma client, repositories, HTTP helpers. **The only place that touches the DB**; files import `server-only`
 - `e2e/` — Playwright specs (`*.spec.ts`) and `support/` (DB prep and reseed, grid locators, mouse drag helper)
+- `docs/` — `ANALYSIS.md` (known problems with priorities and proposals), `PLAN.md` (original plan and decisions)
 - `tests/` — shared test helpers (`fixtures`, `fetch` stub, `render`, `viewport`, `db`), setup and stubs. Test files live next to the code as `*.test.ts(x)`
 
 ## Conventions
@@ -56,7 +57,7 @@ Never commit `.env` or `prisma/data/*.db*`; the seed (`prisma/seed.ts`) is idemp
 - Server Components by default. `use client` only for Web APIs and interactivity
 - Put new shadcn components on the aliases from `components.json`, not in `src/components`
 - Do not use `any`
-- Do not add ESLint, Prettier, Jest, or Playwright until they are in `package.json`
+- Do not add ESLint, Prettier, or Jest until they are in `package.json` (Vitest and Playwright are already there)
 - The DB is chosen by the `DATABASE_URL` scheme, not `NODE_ENV`: `file:` → SQLite (local dev, tests, E2E), `postgresql://` → Postgres (production). Each provider has its own schema and migrations: `prisma/schema.prisma` + `prisma/migrations` (SQLite), `prisma/postgres/schema.prisma` + `prisma/postgres/migrations` (Postgres). `prisma.config.ts` and `src/server/create-client.ts` pick by URL (`prisma/database-url.ts`). Keep the model blocks of both schemas identical (`prisma/schemas.test.ts` enforces it) and add every migration to both folders. No raw SQL; only `src/server` touches the DB. Nothing migrates or seeds on boot: the production image has no Prisma CLI, run `DATABASE_URL=postgresql://… pnpm db:setup` once from outside. The Postgres path has not been run against a live database in tests
 - Request and response shapes are zod schemas in `src/entities/*/model/schemas.ts`, shared by client and Route Handlers
 - Data model: a shift is keyed by `employeeId|YYYY-MM-DD` (`cellKey`). Dates are `YYYY-MM-DD` strings, times are `HH:mm`. If end ≤ start the shift crosses midnight
@@ -96,6 +97,13 @@ Rules of thumb:
 - `e2e/` is in oxlint `ignorePatterns` but type-checked by `tsc`; `pnpm format` covers it
 
 ## Known state
+
+Known problems are tracked in `docs/ANALYSIS.md` (P1–P3). Read it before touching saving, the quick-assign menu, the store or deployment. The most important ones:
+
+- `saveShifts` deletes with one `OR` over `(employeeId, date)` pairs: 500+ deletes in one save exceed the SQLite parameter limit. Upserts run one query per shift inside an interactive transaction (default 5 s timeout)
+- Decision §10.1 in `docs/PLAN.md`: quick assign by date must apply to **all** employees. The code still passes the search-filtered list, and `e2e/views.spec.ts` asserts the current behavior
+- `useScheduleStore` computes `anchor: todayISO()` at module load, also on the server (SSR), so the server-rendered period title can drift from the client
+- Mutating API routes are public in production; the seed wipes all data without a guard
 
 `pnpm knip` should pass. `@prisma/client` is in `package.json` → `knip.ignoreDependencies`: `src/generated` is gitignored, so knip cannot see that the generated client imports `@prisma/client/runtime/client`. Do not remove the package. Any other knip finding is real: fix it.
 
