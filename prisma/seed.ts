@@ -1,14 +1,9 @@
 import { existsSync } from "node:fs";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 import { addDays, format, startOfWeek } from "date-fns";
-import { PrismaClient } from "../src/generated/prisma/client";
+import { createPrismaClient } from "../src/server/create-client";
+import { DEFAULT_DATABASE_URL } from "./database-url";
 
 if (existsSync(".env")) process.loadEnvFile(".env");
-
-const adapter = new PrismaBetterSqlite3({
-  url: process.env.DATABASE_URL ?? "file:./prisma/data/dev.db",
-});
-const prisma = new PrismaClient({ adapter });
 
 const SCHEDULE_ID = "main";
 
@@ -53,7 +48,17 @@ const SHIFTS: Cell[] = [
   tpl("emp-5", 4, "tpl-day"),
 ];
 
+/** Сидирует ту базу, на которую указывает DATABASE_URL: SQLite (file:) или Postgres (postgresql://). */
 async function main() {
+  const prisma = await createPrismaClient(process.env.DATABASE_URL ?? DEFAULT_DATABASE_URL);
+  try {
+    await seed(prisma);
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
+async function seed(prisma: Awaited<ReturnType<typeof createPrismaClient>>) {
   const monday = startOfWeek(new Date(), { weekStartsOn: 1 });
 
   await prisma.$transaction(async tx => {
@@ -88,9 +93,7 @@ async function main() {
   console.log(`Seed: ${EMPLOYEES.length} сотрудников, ${TEMPLATES.length} шаблона, ${SHIFTS.length} смен`);
 }
 
-main()
-  .catch((error: unknown) => {
-    console.error(error);
-    process.exitCode = 1;
-  })
-  .finally(() => prisma.$disconnect());
+main().catch((error: unknown) => {
+  console.error(error);
+  process.exitCode = 1;
+});

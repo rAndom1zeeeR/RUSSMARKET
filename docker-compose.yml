@@ -1,6 +1,7 @@
 # Dokploy: Compose, then Domains → service "app", container port = PORT from .env (default 3000).
-# SQLite is the volume. One replica only — a second process corrupts the file.
-# Do not override DATABASE_URL with file:./prisma/data/dev.db: that path dies on redeploy.
+# The database is an external Postgres: set DATABASE_URL (postgresql://user:password@host:5432/db) in the Dokploy
+# environment. The compose file refuses to start without it. No volume: the app keeps no state on disk.
+# Tables and seed data are created once from outside, see "Деплой" in README.md (`pnpm db:setup`).
 
 services:
   app:
@@ -13,11 +14,9 @@ services:
       - path: .env
         required: false
     environment:
-      DATABASE_URL: file:/data/app.db
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL (postgresql://…) is required}
       NODE_ENV: ${NODE_ENV:-production}
       PORT: ${PORT:-3000}
-    volumes:
-      - app-data:/data
     expose:
       - "${PORT:-3000}"
     networks:
@@ -34,9 +33,6 @@ services:
       timeout: 5s
       retries: 5
       start_period: 40s
-
-volumes:
-  app-data:
 
 networks:
   dokploy-network:

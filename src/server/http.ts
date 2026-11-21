@@ -23,10 +23,18 @@ export function errorResponse(error: unknown): NextResponse {
     return json({ error: "Некорректный JSON в теле запроса" }, 400);
   }
   const message = error instanceof Error ? error.message : "Неизвестная ошибка";
-  if (/no such table|unable to open|SQLITE_CANTOPEN/i.test(message)) {
+  const code = prismaCode(error);
+  // База недоступна или без таблиц: SQLite («no such table», файл не открылся) и Postgres
+  // (P1001 — не достучаться, P2021 — таблицы нет, `relation "…" does not exist`).
+  const notReadyCodes = ["P1001", "P1002", "P1017", "P2021"];
+  if (
+    (code !== null && notReadyCodes.includes(code)) ||
+    /no such table|unable to open|SQLITE_CANTOPEN|relation "[^"]+" does not exist|ECONNREFUSED|ENOTFOUND|Can.t reach database/i.test(
+      message
+    )
+  ) {
     return json({ error: "База данных не готова. Выполните `pnpm db:setup`." }, 500);
   }
-  const code = prismaCode(error);
   if (code === "P2003" || code === "P2025" || /Foreign key|P2003|P2025/i.test(message)) {
     return json({ error: "Сотрудник, шаблон или график не найден" }, 400);
   }

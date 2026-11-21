@@ -92,7 +92,11 @@ export const REQUIREMENT_GROUPS: readonly RequirementGroup[] = [
         note: "Шаблон → ячейка (или все выделенные), смена → другая ячейка.",
       },
       { title: "Представление в виде месяца", status: "done" },
-      { title: "Сохранение результата", status: "done", note: "В SQLite, одним запросом и одной транзакцией." },
+      {
+        title: "Сохранение результата",
+        status: "done",
+        note: "В базу (SQLite локально, Postgres на проде), одним запросом и одной транзакцией.",
+      },
       {
         title: "Взаимодействие frontend и backend",
         status: "done",
@@ -127,7 +131,7 @@ export const REQUIREMENT_GROUPS: readonly RequirementGroup[] = [
 export const EXTRAS: readonly Extra[] = [
   {
     title: "База данных и сидер",
-    text: "Prisma 7 + SQLite, миграции и идемпотентный сидер: файл БД не в git, но после `pnpm db:setup` проект сразу с данными.",
+    text: "Prisma 7: SQLite локально и Postgres на проде (выбирает `DATABASE_URL`), у каждой свои миграции; сидер даёт данные одной командой `pnpm db:setup`.",
   },
   {
     title: "Черновик правок",
@@ -183,7 +187,7 @@ export const EXTRAS: readonly Extra[] = [
   },
   {
     title: "Деплой в Docker",
-    text: "Multi-stage образ (Node 22, Next.js standalone) и Compose для Dokploy: SQLite на volume `/data` (`file:/data/app.db`), одна реплика. Миграции и сидер на сервере запускаются вручную.",
+    text: "Multi-stage образ (Node 22, Next.js standalone) и Compose для Dokploy: база — внешний Postgres из `DATABASE_URL`, тома нет. Таблицы и данные создаёт `pnpm db:setup`, запущенный один раз снаружи.",
   },
 ];
 
@@ -200,7 +204,8 @@ export const TECH_GROUPS: readonly TechGroup[] = [
     title: "Данные и сервер",
     items: [
       { name: "Prisma", version: "7.10", purpose: "ORM, миграции, сидер" },
-      { name: "SQLite", version: "better-sqlite3 12", purpose: "локальная БД — осознанный выбор, см. раздел ниже" },
+      { name: "SQLite", version: "better-sqlite3 12", purpose: "локальная БД: разработка, тесты, E2E" },
+      { name: "PostgreSQL", version: "adapter-pg 7.10", purpose: "прод-база; драйвер-адаптер Prisma" },
       { name: "zod", version: "4.6", purpose: "валидация запросов и общих DTO" },
     ],
   },
@@ -240,7 +245,7 @@ export const TECH_GROUPS: readonly TechGroup[] = [
       {
         name: "Docker",
         version: "—",
-        purpose: "standalone-образ Node 22; Compose для Dokploy, SQLite на volume",
+        purpose: "standalone-образ Node 22; Compose для Dokploy, база — внешний Postgres",
       },
     ],
   },
@@ -251,30 +256,33 @@ export const ARCHITECTURE: readonly ArchitectureStep[] = [
   { title: "TanStack Query", text: "Загрузка периода, мутации сохранения и публикации" },
   { title: "Route Handlers", text: "`/api/*`, валидация zod, общие схемы с клиентом" },
   { title: "Prisma", text: "Репозитории в `src/server`, транзакция на сохранение" },
-  { title: "SQLite", text: "Файл `prisma/data/dev.db`, не в git; данные даёт сидер" },
+  {
+    title: "База",
+    text: "SQLite-файл локально (`prisma/data/dev.db`, не в git), Postgres на проде; данные создаёт сидер",
+  },
 ];
 
 export const DATABASE = {
   reasons: [
-    "Проверяющему не нужен сервер БД: после `pnpm db:setup` проект сразу работает с данными.",
-    "Файл БД лежит в проекте, но не в git; сидер воспроизводит данные одной командой.",
-    "Задача — один график одной компании: отдельный сервер БД дал бы сложность без выгоды.",
+    "Разработчику и тестам не нужен сервер БД: после `pnpm db:setup` проект сразу работает с данными.",
+    "Файл базы не в git, сидер воспроизводит данные одной командой.",
+    "Тесты и E2E идут на временной SQLite с боевыми миграциями — быстро и изолированно, рабочая база не затрагивается.",
   ],
   readiness: [
-    "Весь доступ к данным идёт через Prisma: сырого SQL и типов, специфичных для SQLite, в коде нет.",
-    "БД трогает только `src/server`: репозитории скрывают детали от Route Handlers и интерфейса.",
-    "Адрес БД — переменная `DATABASE_URL`; от SQLite зависят лишь провайдер в схеме и адаптер в двух файлах.",
-    "Целостность держит схема, а не SQLite: уникальный ключ (график, сотрудник, дата), индексы и каскады переносятся как есть.",
-    "Сохранение уже выполняется одной транзакцией — та же модель работает на Postgres.",
+    "Прод работает на Postgres: `DATABASE_URL=postgresql://…`, без тома, реплик может быть несколько.",
+    "Провайдер выбирает схема `DATABASE_URL`, а не `NODE_ENV`; у SQLite и Postgres свои схема и миграции.",
+    "Генерируются оба клиента Prisma, в рантайме грузится только нужный адаптер: `better-sqlite3` или `pg`.",
+    "Модели в двух схемах совпадают — это проверяет тест; миграция Postgres сгенерирована Prisma из той же схемы.",
+    "Сохранение остаётся одной транзакцией, код репозиториев один для обеих баз.",
   ],
   steps: [
-    'В `prisma/schema.prisma` заменить `provider = "sqlite"` на `"postgresql"`.',
-    "Поставить `@prisma/adapter-pg` и `pg`, заменить адаптер в `src/server/db.ts` и `prisma/seed.ts`.",
-    'Указать `DATABASE_URL="postgresql://…"`.',
-    "Удалить `prisma/migrations` (они на диалекте SQLite), выполнить `prisma migrate dev --name init` и `pnpm db:seed`.",
+    'Создать базу Postgres и указать `DATABASE_URL="postgresql://…"` в окружении Dokploy.',
+    "Один раз выполнить `DATABASE_URL=… pnpm db:setup`: миграции Postgres и сидер (сидер пересоздаёт данные).",
+    "Задеплоить: образ собирается с заглушкой URL, при сборке к базе никто не подключается.",
+    "Правки моделей вносить в обе схемы и в оба каталога миграций: `prisma/migrations` и `prisma/postgres/migrations`.",
   ],
   caveat:
-    "Миграция описана, но на Postgres не запускалась. Даты и время хранятся строками (`YYYY-MM-DD`, `HH:mm`) ради простоты; в Postgres их можно перевести в `Date` / `Time`.",
+    "Postgres-путь на живой базе не прогонялся: миграция сгенерирована Prisma из схемы, а клиент, выбор провайдера и ошибки недоступной базы покрыты тестами. Сидер удаляет данные — не запускайте его повторно на боевой базе.",
 } as const;
 
 export const TESTING = {
@@ -330,6 +338,6 @@ export const LIMITATIONS: readonly string[] = [
   "Режим «Месяц» на 320 px и «Своя смена» на узких экранах в E2E не проверялись; ширина 640 px вручную и автотестами не прогонялась.",
   "Нет авторизации — её не было в ТЗ.",
   "Быстрое назначение применяется ко всем видимым сотрудникам — допущение, в ТЗ это не уточнено.",
-  "В Compose одна реплика: файл SQLite нельзя открывать из двух процессов.",
+  "Postgres-путь на живой базе не прогонялся: миграция сгенерирована Prisma, а клиент, выбор провайдера и ошибки недоступной базы покрыты тестами.",
   "Рабочий образ не содержит Prisma CLI: миграции и сидер на сервере запускаются вручную, при старте контейнера этого не происходит.",
 ];

@@ -1,5 +1,6 @@
 # Multi-stage, Node 22, Next.js standalone.
-# SQLite file is /data/app.db, mounted by docker-compose.yml.
+# Production database is Postgres: DATABASE_URL (postgresql://…) is passed at runtime by docker-compose.yml / Dokploy.
+# SQLite is for local development only and is not used in this image.
 
 FROM node:22-alpine AS deps
 RUN apk add --no-cache libc6-compat python3 make g++ \
@@ -22,8 +23,9 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV DATABASE_URL=file:/tmp/build.db
-RUN pnpm exec prisma generate && pnpm build
+# Placeholder: the build never connects to a database, it only needs a URL of the right kind.
+ENV DATABASE_URL=postgresql://build:build@localhost:5432/build
+RUN pnpm db:generate && pnpm build
 
 FROM node:22-alpine AS runner
 RUN apk add --no-cache dumb-init wget \
@@ -32,14 +34,10 @@ RUN apk add --no-cache dumb-init wget \
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV HOSTNAME=0.0.0.0
-ENV DATABASE_URL=file:/data/app.db
 
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
-
-# Каталог БД: новый именованный том наследует владельца этого каталога, иначе писать в него мог бы только root.
-RUN mkdir -p /data && chown nextjs:nodejs /data
 
 USER nextjs
 

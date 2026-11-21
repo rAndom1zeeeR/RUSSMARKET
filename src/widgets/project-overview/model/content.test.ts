@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
@@ -81,7 +81,7 @@ describe("дополнения, архитектура, ограничения",
       "TanStack Query",
       "Route Handlers",
       "Prisma",
-      "SQLite",
+      "База",
     ]);
     expect(LAYERS_NOTE).toContain("shared");
   });
@@ -93,33 +93,34 @@ describe("дополнения, архитектура, ограничения",
 });
 
 describe("раздел про базу данных", () => {
-  it("объясняет выбор SQLite, готовность и шаги миграции", () => {
+  it("объясняет роль SQLite, Postgres и шаги запуска на проде", () => {
     expect(DATABASE.reasons.length).toBeGreaterThanOrEqual(3);
     expect(DATABASE.readiness.length).toBeGreaterThanOrEqual(3);
     expect(DATABASE.steps).toHaveLength(4);
   });
 
-  it("шаги миграции называют реальные места правок", () => {
+  it("шаги запуска называют реальные команды и каталоги", () => {
     const steps = DATABASE.steps.join("\n");
-    for (const mention of [
-      "schema.prisma",
-      "src/server/db.ts",
-      "prisma/seed.ts",
-      "DATABASE_URL",
-      "prisma/migrations",
-    ]) {
+    for (const mention of ["DATABASE_URL", "pnpm db:setup", "prisma/migrations", "prisma/postgres/migrations"]) {
       expect(steps).toContain(mention);
     }
   });
 
-  it("честно оговаривает, что миграция не проверялась на Postgres", () => {
-    expect(DATABASE.caveat).toContain("не запускалась");
+  it("честно оговаривает, что Postgres-путь не прогонялся на живой базе, и предупреждает про сидер", () => {
+    expect(DATABASE.caveat).toContain("не прогонялся");
+    expect(DATABASE.caveat).toContain("Сидер удаляет данные");
   });
 
-  it("файлы из шагов миграции существуют", () => {
-    for (const file of ["prisma/schema.prisma", "src/server/db.ts", "prisma/seed.ts"]) {
-      expect(() => readFileSync(path.join(process.cwd(), file), "utf8")).not.toThrow();
-    }
+  it("упомянутые каталоги и файлы существуют", () => {
+    const files = [
+      "prisma/schema.prisma",
+      "prisma/postgres/schema.prisma",
+      "prisma/migrations",
+      "prisma/postgres/migrations",
+      "src/server/create-client.ts",
+    ];
+    const missing = files.filter(file => !existsSync(path.join(process.cwd(), file)));
+    expect(missing).toEqual([]);
   });
 });
 
@@ -171,6 +172,7 @@ describe("технологии: версии совпадают с package.json"
     TypeScript: "typescript",
     Prisma: "prisma",
     SQLite: "better-sqlite3",
+    PostgreSQL: "@prisma/adapter-pg",
     zod: "zod",
     "TanStack Query": "@tanstack/react-query",
     Zustand: "zustand",

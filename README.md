@@ -21,7 +21,7 @@ Next.js 16 · React 19 · TypeScript · Tailwind v4 · TanStack Query / Virtual 
 
 ```bash
 pnpm install
-cp .env.example .env     # DATABASE_URL="file:./prisma/data/dev.db"
+cp .env.example .env     # DATABASE_URL="file:./prisma/data/dev.db" — локальная SQLite
 pnpm db:setup            # prisma generate + migrate deploy + seed
 pnpm dev                 # http://localhost:$PORT  (PORT из .env, иначе 3000)
 ```
@@ -56,9 +56,15 @@ Production-сборка — Next.js standalone (`output: "standalone"` в `next.
 1. В Dokploy — Compose из репозитория.
 2. Domains → сервис `app`, порт контейнера = `PORT` из `.env` (по умолчанию 3000).
 
-SQLite — volume `app-data`, смонтированный в `/data`. В контейнере `DATABASE_URL=file:/data/app.db` (значение из `.env` compose перебивает). Реплика одна: второй процесс портит файл. Не подменяйте `DATABASE_URL` на `file:./prisma/data/dev.db` — этот путь пропадает при редеплое. Сеть `dokploy-network` внешняя.
+База — внешний Postgres: `DATABASE_URL=postgresql://…` задаётся в окружении Dokploy, без него compose не стартует. Тома нет: приложение ничего не хранит на диске. Образ собирается с заглушкой URL, к базе при сборке никто не подключается. Сеть `dokploy-network` внешняя.
 
-`prisma generate` выполняется при сборке образа. Миграции и сидер при старте **не запускаются**: рабочий образ не содержит Prisma CLI и `prisma/seed.ts`, поэтому на новой базе таблицы и данные нужно создать вручную (`pnpm db:setup` в окружении с исходниками и dev-зависимостями, указав `DATABASE_URL` сервера). Пока этого не сделано, сайт показывает «Графиков пока нет, либо база данных не готова».
+Таблицы и данные создаются один раз снаружи, с любой машины, где есть репозиторий и доступ к базе:
+
+```bash
+DATABASE_URL="postgresql://user:password@host:5432/db" pnpm db:setup   # generate + migrate deploy (Postgres) + seed
+```
+
+Сидер **пересоздаёт данные** (удаляет сотрудников, шаблоны, графики и смены): на боевой базе с настоящими правками повторно его не запускайте — для обновления схемы достаточно `prisma migrate deploy`. Пока таблиц нет, сайт показывает «Графиков пока нет, либо база данных не готова».
 
 ## Возможности
 
@@ -127,11 +133,11 @@ src/features/       schedule-grid, cell-selection, quick-assign, custom-shift, s
 src/entities/       employee, shift-template, shift, schedule (model / api / ui)
 src/shared/         ui-компоненты, lib (даты, время, брейкпоинты), http-клиент
 src/server/         Prisma-клиент, репозитории, http-хелперы (только на сервере)
-prisma/             schema.prisma, migrations, seed.ts, data/ (файл БД, не в git)
+prisma/             schema.prisma + migrations (SQLite), postgres/ (схема и миграции Postgres), seed.ts, database-url.ts, data/ (файл SQLite, не в git)
 ```
 
 Поток данных: UI → черновик правок (Zustand) поверх серверных данных (TanStack Query) → `/api/*` (валидация zod) →
-репозитории (Prisma) → SQLite. Отображаемые смены = данные периода + черновик; покрытие и счётчики шаблонов
+репозитории (Prisma) → SQLite (локально) или Postgres (прод). Отображаемые смены = данные периода + черновик; покрытие и счётчики шаблонов
 считаются из них на клиенте.
 
 | Метод и адрес                     | Назначение                                |
@@ -145,15 +151,18 @@ prisma/             schema.prisma, migrations, seed.ts, data/ (файл БД, н
 
 ## База данных
 
-SQLite выбрана осознанно: проверяющему не нужен сервер БД, файл лежит в проекте (но не в git), сидер воспроизводит данные.
-Код готов к переезду на PostgreSQL: весь доступ идёт через Prisma, сырого SQL нет, БД трогает только `src/server`,
-сохранение — одна транзакция. Для миграции нужно:
+Две базы, выбирает **схема `DATABASE_URL`**, а не `NODE_ENV` (его Next выставляет сам, а `NODE_ENV=development` в `.env` ломает `next build`):
 
-1. в `prisma/schema.prisma` заменить `provider = "sqlite"` на `"postgresql"`;
-2. поставить `@prisma/adapter-pg` и `pg`, заменить адаптер в `src/server/db.ts` и `prisma/seed.ts`;
-3. указать `DATABASE_URL="postgresql://…"`;
-4. удалить `prisma/migrations` (они на диалекте SQLite), выполнить `prisma migrate dev --name init` и `pnpm db:seed`.
+| Где                              | `DATABASE_URL`                            | Провайдер | Схема и миграции                                              |
+| -------------------------------- | ----------------------------------------- | --------- | ------------------------------------------------------------- |
+| Локально: разработка, тесты, E2E | `file:./prisma/data/dev.db`               | SQLite    | `prisma/schema.prisma`, `prisma/migrations`                   |
+| Прод                             | `postgresql://user:password@host:5432/db` | Postgres  | `prisma/postgres/schema.prisma`, `prisma/postgres/migrations` |
 
-Эти шаги на PostgreSQL не запускались. Даты и время хранятся строками (`YYYY-MM-DD`, `HH:mm`) — при желании их можно перевести в `Date` / `Time`.
+- Клиент Prisma генерируется для обоих провайдеров (`pnpm db:generate` → `src/generated/prisma` и `src/generated/prisma-postgres`; делает и `postinstall`). В рантайме `src/server/create-client.ts` берёт нужный и грузит только свой адаптер: `better-sqlite3` или `@prisma/adapter-pg`.
+- Команды Prisma (`migrate`, `db seed`, `studio`) тоже смотрят на `DATABASE_URL`: `prisma.config.ts` подставляет схему и каталог миграций нужного провайдера.
+- Модели в двух схемах должны совпадать: тест `prisma/schemas.test.ts` падает при расхождении. Меняя модель, правьте обе схемы и добавляйте миграцию в оба каталога: для SQLite — `pnpm db:migrate`, для Postgres — то же с `DATABASE_URL=postgresql://…` (нужна доступная база).
+- Начальная миграция Postgres сгенерирована командой `prisma migrate diff --from-empty --to-schema prisma/postgres/schema.prisma --script`.
+
+Postgres-путь на живой базе не прогонялся: миграция сгенерирована Prisma из схемы, а выбор провайдера, создание клиента и ошибки при недоступной базе покрыты тестами. Даты и время хранятся строками (`YYYY-MM-DD`, `HH:mm`) — при желании их можно перевести в `Date` / `Time`.
 
 Подробный план и допущения — в [docs/PLAN.md](docs/PLAN.md).

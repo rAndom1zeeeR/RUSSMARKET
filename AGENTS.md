@@ -1,7 +1,7 @@
 # AGENTS.md
 
 Next.js app «График смен» (тестовое задание Fullstack-разработчика). Фронтенд и бэкенд в одном репозитории:
-Route Handlers + Prisma 7 + SQLite. Нет авторизации; логика, сервер и компоненты покрыты тестами на Vitest, основные сценарии — E2E на Playwright.
+Route Handlers + Prisma 7 (SQLite locally, Postgres in production). Нет авторизации; логика, сервер и компоненты покрыты тестами на Vitest, основные сценарии — E2E на Playwright.
 
 ## Stack
 
@@ -9,7 +9,7 @@ Route Handlers + Prisma 7 + SQLite. Нет авторизации; логика,
 - Tailwind CSS v4 via `@tailwindcss/postcss`, tokens and breakpoints in `src/app/globals.css`
 - shadcn-style UI on Radix (`radix-ui`) + `cva`. Aliases in `components.json`: UI in `@/shared/components/ui`, `cn` in `@/shared/lib/utils`
 - Server state: TanStack Query. UI state and the draft of unsaved edits: Zustand. Rows are virtualized with TanStack Virtual. Drag-and-drop: `@dnd-kit/core`
-- Prisma 7 + SQLite (`better-sqlite3` adapter). Client is generated into `src/generated/prisma` (git-ignored)
+- Prisma 7 with two providers chosen by the `DATABASE_URL` scheme: SQLite (`file:`, `better-sqlite3` adapter) for local dev/tests/E2E, Postgres (`postgresql://`, `@prisma/adapter-pg`) for production. Both clients are generated into `src/generated/prisma` and `src/generated/prisma-postgres` (git-ignored)
 - Validation: zod. Dates: date-fns (ru locale)
 - React Compiler is on: `reactCompiler: true` in `next.config.ts`
 - Lint is oxlint, format is oxfmt. No ESLint or Prettier
@@ -20,7 +20,7 @@ Route Handlers + Prisma 7 + SQLite. Нет авторизации; логика,
 
 | Task         | Command                                                                                   |
 | ------------ | ----------------------------------------------------------------------------------------- |
-| Install      | `pnpm install` (runs `prisma generate`)                                                   |
+| Install      | `pnpm install` (postinstall generates both Prisma clients)                                |
 | First run    | `cp .env.example .env`, then `pnpm db:setup`                                              |
 | Dev server   | `pnpm dev` (`PORT` from `.env`, default 3000)                                             |
 | Lint (fix)   | `pnpm lint`                                                                               |
@@ -35,7 +35,7 @@ Route Handlers + Prisma 7 + SQLite. Нет авторизации; логика,
 | Start        | `pnpm start`                                                                              |
 | DB           | `pnpm db:setup` / `db:seed` / `db:reset` / `db:migrate` / `db:studio`                     |
 
-`dev` needs `.env` (`DATABASE_URL="file:./prisma/data/dev.db"`) and a seeded DB. `build` does not touch the DB.
+`dev` needs `.env` (`DATABASE_URL`: `file:` for local SQLite, `postgresql://` for Postgres) and a seeded DB. `build` does not touch the DB. Never commit `.env` or `prisma/data/*.db*`. The seed (`prisma/seed.ts`) deletes and rebuilds all data: never run it against a production database that holds real edits.
 Never commit `.env` or `prisma/data/*.db*`; the seed (`prisma/seed.ts`) is idempotent and rebuilds all data.
 
 ## Layout
@@ -57,7 +57,7 @@ Never commit `.env` or `prisma/data/*.db*`; the seed (`prisma/seed.ts`) is idemp
 - Put new shadcn components on the aliases from `components.json`, not in `src/components`
 - Do not use `any`
 - Do not add ESLint, Prettier, Jest, or Playwright until they are in `package.json`
-- The local SQLite DB is a deliberate choice and the code is meant to stay portable to PostgreSQL: no raw SQL, no SQLite-only Prisma types, only `src/server` touches the DB. Keep it that way. Provider and adapter live in `prisma/schema.prisma`, `src/server/db.ts` and `prisma/seed.ts`; migration steps are in the README and on the overview page. The production image has no Prisma CLI or seed tooling: migrations and the seed on a server are run manually, nothing does it on boot
+- The DB is chosen by the `DATABASE_URL` scheme, not `NODE_ENV`: `file:` → SQLite (local dev, tests, E2E), `postgresql://` → Postgres (production). Each provider has its own schema and migrations: `prisma/schema.prisma` + `prisma/migrations` (SQLite), `prisma/postgres/schema.prisma` + `prisma/postgres/migrations` (Postgres). `prisma.config.ts` and `src/server/create-client.ts` pick by URL (`prisma/database-url.ts`). Keep the model blocks of both schemas identical (`prisma/schemas.test.ts` enforces it) and add every migration to both folders. No raw SQL; only `src/server` touches the DB. Nothing migrates or seeds on boot: the production image has no Prisma CLI, run `DATABASE_URL=postgresql://… pnpm db:setup` once from outside. The Postgres path has not been run against a live database in tests
 - Request and response shapes are zod schemas in `src/entities/*/model/schemas.ts`, shared by client and Route Handlers
 - Data model: a shift is keyed by `employeeId|YYYY-MM-DD` (`cellKey`). Dates are `YYYY-MM-DD` strings, times are `HH:mm`. If end ≤ start the shift crosses midnight
 - Draft model: shown shifts = TanStack Query data overlaid with the Zustand `draft`. Coverage and template usage are derived, never stored. "Сохранить" sends a diff `{ upserts, deletes }` in one transaction; "Опубликовать" is enabled only without unsaved edits

@@ -87,8 +87,8 @@ export function ProjectOverview() {
         <h1 className="text-3xl leading-tight font-medium tracking-[-1px] md:text-[40px]">График смен</h1>
         <p className="max-w-3xl text-base leading-6">
           Функциональный интерфейс по макетам Figma: просмотр расписания, назначение и редактирование смен, шаблоны,
-          drag-and-drop, представления «Неделя» и «Месяц», сохранение и публикация. Данные живут в SQLite, интерфейс
-          общается с сервером через Route Handlers.
+          drag-and-drop, представления «Неделя» и «Месяц», сохранение и публикация. Данные живут в базе (SQLite
+          локально, Postgres на проде), интерфейс общается с сервером через Route Handlers.
         </p>
         <div className="flex flex-col gap-2 md:flex-row">
           <Link
@@ -210,13 +210,13 @@ export function ProjectOverview() {
       <section aria-labelledby="database-title" className="flex flex-col gap-4">
         <SectionTitle
           id="database-title"
-          hint="Локальная база — осознанное решение для этого задания, а не упрощение «на потом»."
+          hint="Провайдер выбирает DATABASE_URL: локально файл SQLite, на сервере Postgres."
         >
-          База данных: SQLite сейчас, переезд на Postgres — несколько правок
+          База данных: SQLite локально, Postgres на проде
         </SectionTitle>
         <div className="grid gap-2 lg:grid-cols-3">
           <article className={CARD}>
-            <h3 className="mb-3 text-base leading-6 font-semibold">Почему локальная SQLite</h3>
+            <h3 className="mb-3 text-base leading-6 font-semibold">SQLite для разработки</h3>
             <ul className="flex flex-col gap-3">
               {DATABASE.reasons.map(item => (
                 <li key={item} className="text-base leading-6">
@@ -226,7 +226,7 @@ export function ProjectOverview() {
             </ul>
           </article>
           <article className={CARD}>
-            <h3 className="mb-3 text-base leading-6 font-semibold">Почему всё готово к Postgres</h3>
+            <h3 className="mb-3 text-base leading-6 font-semibold">Postgres для продакшена</h3>
             <ul className="flex flex-col gap-3">
               {DATABASE.readiness.map(item => (
                 <li key={item} className="flex gap-3 text-base leading-6">
@@ -239,7 +239,7 @@ export function ProjectOverview() {
             </ul>
           </article>
           <article className={CARD}>
-            <h3 className="mb-3 text-base leading-6 font-semibold">Как мигрировать</h3>
+            <h3 className="mb-3 text-base leading-6 font-semibold">Как запустить на проде</h3>
             <ol className="flex list-decimal flex-col gap-3 pl-5 text-base leading-6">
               {DATABASE.steps.map(item => (
                 <li key={item}>

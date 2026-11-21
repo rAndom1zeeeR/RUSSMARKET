@@ -90,23 +90,24 @@ describe("ProjectOverview: содержимое", () => {
 });
 
 describe("ProjectOverview: раздел про базу данных", () => {
-  it("объясняет выбор SQLite и готовность к Postgres", () => {
+  it("объясняет роль SQLite и Postgres", () => {
     render(<ProjectOverview />);
-    expect(screen.getByRole("heading", { name: "Почему локальная SQLite" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Почему всё готово к Postgres" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Как мигрировать" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "SQLite для разработки" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Postgres для продакшена" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Как запустить на проде" })).toBeInTheDocument();
   });
 
-  it("шаги миграции — нумерованный список из четырёх шагов", () => {
+  it("шаги запуска — нумерованный список из четырёх шагов", () => {
     render(<ProjectOverview />);
-    const heading = screen.getByRole("heading", { name: "Как мигрировать" });
+    const heading = screen.getByRole("heading", { name: "Как запустить на проде" });
     const steps = within(heading.closest("article") as HTMLElement).getAllByRole("listitem");
     expect(steps).toHaveLength(4);
   });
 
-  it("предупреждает, что миграция не проверялась", () => {
+  it("предупреждает, что Postgres на живой базе не прогонялся, и про сидер", () => {
     render(<ProjectOverview />);
-    expect(screen.getByText(/не запускалась/)).toBeInTheDocument();
+    expect(screen.getAllByText(/на живой базе не прогонялся/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Сидер удаляет данные/).length).toBeGreaterThan(0);
   });
 });
 

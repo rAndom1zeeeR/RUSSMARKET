@@ -36,14 +36,19 @@ describe("errorResponse", () => {
     expect(await read(response)).toEqual({ error: "Некорректный JSON в теле запроса" });
   });
 
-  it.each(["no such table: Employee", "unable to open database file", "SQLITE_CANTOPEN: cannot open"])(
-    "БД не готова («%s») → 500 с подсказкой",
-    async message => {
-      const response = errorResponse(new Error(message));
-      expect(response.status).toBe(500);
-      expect(await read(response)).toEqual({ error: "База данных не готова. Выполните `pnpm db:setup`." });
-    }
-  );
+  it.each([
+    "no such table: Employee",
+    "unable to open database file",
+    "SQLITE_CANTOPEN: cannot open",
+    'relation "Employee" does not exist',
+    "connect ECONNREFUSED 127.0.0.1:5432",
+    "getaddrinfo ENOTFOUND db.internal",
+    "Can't reach database server at db:5432",
+  ])("БД не готова («%s») → 500 с подсказкой", async message => {
+    const response = errorResponse(new Error(message));
+    expect(response.status).toBe(500);
+    expect(await read(response)).toEqual({ error: "База данных не готова. Выполните `pnpm db:setup`." });
+  });
 
   it.each(["Foreign key constraint violated", "Invalid prisma call P2003", "Record not found P2025"])(
     "нарушение связей («%s») → 400",
@@ -51,6 +56,15 @@ describe("errorResponse", () => {
       const response = errorResponse(new Error(message));
       expect(response.status).toBe(400);
       expect(await read(response)).toEqual({ error: "Сотрудник, шаблон или график не найден" });
+    }
+  );
+
+  it.each(["P1001", "P1002", "P1017", "P2021"])(
+    "ошибка Prisma с кодом %s (Postgres недоступен или без таблиц) → подсказка",
+    async code => {
+      const response = errorResponse(Object.assign(new Error("driver error"), { code }));
+      expect(response.status).toBe(500);
+      expect(await read(response)).toEqual({ error: "База данных не готова. Выполните `pnpm db:setup`." });
     }
   );
 
