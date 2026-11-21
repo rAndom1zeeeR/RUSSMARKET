@@ -28,14 +28,13 @@ export function prepareDatabase(): void {
 
   const sqlite = new Database(file);
   const migrations = path.join(root, "prisma", "migrations");
-  for (const name of readdirSync(migrations).toSorted()) {
-    const sqlPath = path.join(migrations, name, "migration.sql");
-    try {
-      sqlite.exec(readFileSync(sqlPath, "utf8"));
-    } catch (error) {
-      // Каталоги без migration.sql (migration_lock.toml) пропускаем, реальные ошибки SQL — нет.
-      if (!(error instanceof Error) || !("code" in error) || error.code !== "ENOENT") throw error;
-    }
+  // migration_lock.toml is a file. On Linux, open("…/migration_lock.toml/migration.sql") is ENOTDIR, not ENOENT.
+  const names = readdirSync(migrations, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .toSorted();
+  for (const name of names) {
+    sqlite.exec(readFileSync(path.join(migrations, name, "migration.sql"), "utf8"));
   }
   sqlite.close();
 }

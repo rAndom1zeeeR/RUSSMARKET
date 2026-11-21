@@ -13,14 +13,13 @@ const file = path.join(directory, "test.db").replaceAll("\\", "/");
 
 const migrationsDir = path.join(process.cwd(), "prisma", "migrations");
 const sqlite = new Database(file);
-for (const name of readdirSync(migrationsDir).toSorted()) {
-  const sqlPath = path.join(migrationsDir, name, "migration.sql");
-  try {
-    sqlite.exec(readFileSync(sqlPath, "utf8"));
-  } catch (error) {
-    // Каталоги без migration.sql (migration_lock.toml) пропускаем, реальные ошибки SQL — нет.
-    if (!(error instanceof Error) || !("code" in error) || error.code !== "ENOENT") throw error;
-  }
+// migration_lock.toml is a file. On Linux, open("…/migration_lock.toml/migration.sql") is ENOTDIR, not ENOENT.
+const names = readdirSync(migrationsDir, { withFileTypes: true })
+  .filter((entry) => entry.isDirectory())
+  .map((entry) => entry.name)
+  .toSorted();
+for (const name of names) {
+  sqlite.exec(readFileSync(path.join(migrationsDir, name, "migration.sql"), "utf8"));
 }
 sqlite.close();
 
