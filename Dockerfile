@@ -26,7 +26,7 @@ ENV DATABASE_URL=file:/tmp/build.db
 RUN pnpm exec prisma generate && pnpm build
 
 FROM node:22-alpine AS runner
-RUN apk add --no-cache dumb-init su-exec wget \
+RUN apk add --no-cache dumb-init wget \
   && addgroup -g 1001 -S nodejs \
   && adduser -S nextjs -u 1001 -G nodejs
 WORKDIR /app
@@ -37,13 +37,15 @@ ENV DATABASE_URL=file:/data/app.db
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/prisma/migrations ./prisma/migrations
-COPY docker/entrypoint.sh /entrypoint.sh
-RUN sed -i 's/\r$//' /entrypoint.sh && chmod +x /entrypoint.sh
+
+# Каталог БД: новый именованный том наследует владельца этого каталога, иначе писать в него мог бы только root.
+RUN mkdir -p /data && chown nextjs:nodejs /data
+
+USER nextjs
 
 EXPOSE 3000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=5 CMD sh -c "wget -qO- http://127.0.0.1:3000/ || exit 1"
 
-ENTRYPOINT ["dumb-init", "--", "/entrypoint.sh"]
+ENTRYPOINT ["dumb-init", "--"]
 CMD ["node", "server.js"]

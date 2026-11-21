@@ -255,15 +255,9 @@
       }
     },
     {
-      "files": ["prisma/seed.ts", "src/server/ensure-db.ts"],
+      "files": ["prisma/seed.ts"],
       "rules": {
         "no-console": "off"
-      }
-    },
-    {
-      "files": ["src/server/ensure-db.ts"],
-      "rules": {
-        "security/detect-non-literal-fs-filename": "off"
       }
     },
     {
