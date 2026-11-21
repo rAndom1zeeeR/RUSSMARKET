@@ -181,6 +181,10 @@ export const EXTRAS: readonly Extra[] = [
     title: "CI",
     text: "GitHub Actions на push и pull request: oxlint, oxfmt --check, knip, тесты с порогом покрытия и отдельная задача с E2E на Playwright.",
   },
+  {
+    title: "Деплой в Docker",
+    text: "Multi-stage образ (Node 22, Next.js standalone) и Compose для Dokploy: SQLite на volume `/data` (`file:/data/app.db`), одна реплика.",
+  },
 ];
 
 export const TECH_GROUPS: readonly TechGroup[] = [
@@ -228,7 +232,16 @@ export const TECH_GROUPS: readonly TechGroup[] = [
       { name: "Testing Library", version: "—", purpose: "тесты компонентов глазами пользователя" },
       { name: "Playwright", version: "1.65", purpose: "E2E в настоящем браузере: мышь, касания, перезагрузки" },
       { name: "pnpm, tsx, knip", version: "—", purpose: "пакеты, запуск сидера, поиск неиспользуемого кода" },
-      { name: "GitHub Actions", version: "—", purpose: "CI: lint, format, knip на push и pull request" },
+      {
+        name: "GitHub Actions",
+        version: "—",
+        purpose: "CI: lint, format, knip, тесты с покрытием и E2E на push и pull request",
+      },
+      {
+        name: "Docker",
+        version: "—",
+        purpose: "standalone-образ Node 22; Compose для Dokploy, SQLite на volume",
+      },
     ],
   },
 ];
@@ -317,4 +330,6 @@ export const LIMITATIONS: readonly string[] = [
   "Режим «Месяц» на 320 px и «Своя смена» на узких экранах в E2E не проверялись; ширина 640 px вручную и автотестами не прогонялась.",
   "Нет авторизации — её не было в ТЗ.",
   "Быстрое назначение применяется ко всем видимым сотрудникам — допущение, в ТЗ это не уточнено.",
+  "В Compose одна реплика: файл SQLite нельзя открывать из двух процессов.",
+  "Раннер-образ не содержит Prisma CLI: миграции и сидер при старте контейнера не выполняются, пустой volume — база без таблиц.",
 ];

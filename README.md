@@ -32,20 +32,33 @@ pnpm dev                 # http://localhost:3000
 
 ## Скрипты
 
-| Команда                                 | Что делает                                            |
-| --------------------------------------- | ----------------------------------------------------- |
-| `pnpm dev` / `build` / `start`          | разработка / production-сборка / запуск               |
-| `pnpm db:setup`                         | generate + migrate deploy + seed                      |
-| `pnpm db:migrate` / `db:reset`          | новая миграция / сброс БД и seed                      |
-| `pnpm db:seed` / `db:studio`            | пересоздать данные / Prisma Studio                    |
-| `pnpm lint:check` / `pnpm format:check` | oxlint / oxfmt                                        |
-| `pnpm knip`                             | неиспользуемый код                                    |
-| `pnpm test` / `test:watch`              | тесты Vitest: один прогон / режим наблюдения          |
-| `pnpm test:coverage`                    | тесты с отчётом и порогом покрытия                    |
-| `pnpm e2e` / `e2e:ui`                   | E2E на Playwright: сборка, свой сервер :3100, своя БД |
-| `pnpm check`                            | lint + format + knip + тесты, то же, что гоняет CI    |
+| Команда                                 | Что делает                                          |
+| --------------------------------------- | --------------------------------------------------- |
+| `pnpm dev` / `build` / `start`          | разработка / production-сборка / запуск             |
+| `pnpm db:setup`                         | generate + migrate deploy + seed                    |
+| `pnpm db:migrate` / `db:reset`          | новая миграция / сброс БД и seed                    |
+| `pnpm db:seed` / `db:studio`            | пересоздать данные / Prisma Studio                  |
+| `pnpm lint:check` / `pnpm format:check` | oxlint / oxfmt                                      |
+| `pnpm knip`                             | неиспользуемый код                                  |
+| `pnpm test` / `test:watch`              | тесты Vitest: один прогон / режим наблюдения        |
+| `pnpm test:coverage`                    | тесты с отчётом и порогом покрытия                  |
+| `pnpm e2e` / `e2e:ui` / `e2e:report`    | E2E: сборка, сервер :3100, своя БД; UI и HTML-отчёт |
+| `pnpm check`                            | lint + format + knip + тесты, то же, что гоняет CI  |
 
-CI — [`.github/workflows/ci.yml`](.github/workflows/ci.yml): на push и pull request в `master` ставятся Node 22 и pnpm 12.5.1, затем `pnpm check`. Деплоя нет.
+CI — [`.github/workflows/ci.yml`](.github/workflows/ci.yml): на push и pull request в `master` ставятся Node 22 и pnpm 12.5.1, затем lint, format, knip и тесты с покрытием (то же, что `pnpm check`). E2E — отдельная задача. Деплой workflow не делает.
+
+## Деплой
+
+Production-сборка — Next.js standalone (`output: "standalone"` в `next.config.ts`). Образ multi-stage на Node 22 (pnpm 12.5.1): зависимости, `prisma generate` + `pnpm build`, раннер с `node server.js`.
+
+[`docker-compose.yml`](docker-compose.yml) написан под Dokploy, не под локальный `docker compose up`:
+
+1. В Dokploy — Compose из репозитория.
+2. Domains → сервис `app`, порт контейнера 3000.
+
+SQLite — volume `app-data`, смонтированный в `/data`. В контейнере `DATABASE_URL=file:/data/app.db` (значение из `.env` compose перебивает). Реплика одна: второй процесс портит файл. Не подменяйте `DATABASE_URL` на `file:./prisma/data/dev.db` — этот путь пропадает при редеплое. Сеть `dokploy-network` внешняя.
+
+Раннер не содержит Prisma CLI и каталог `prisma/migrations`: при старте контейнера миграции и сидер не выполняются. Пустой volume — файл БД без таблиц.
 
 ## Возможности
 
@@ -143,4 +156,4 @@ SQLite выбрана осознанно: проверяющему не нуже
 
 Эти шаги на PostgreSQL не запускались. Даты и время хранятся строками (`YYYY-MM-DD`, `HH:mm`) — при желании их можно перевести в `Date` / `Time`.
 
-Подробный план и допущения — в [PLAN.md](PLAN.md).
+Подробный план и допущения — в [docs/PLAN.md](docs/PLAN.md).
