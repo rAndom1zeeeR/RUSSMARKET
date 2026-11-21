@@ -32,17 +32,18 @@ pnpm dev                 # http://localhost:3000
 
 ## Скрипты
 
-| Команда                                 | Что делает                                         |
-| --------------------------------------- | -------------------------------------------------- |
-| `pnpm dev` / `build` / `start`          | разработка / production-сборка / запуск            |
-| `pnpm db:setup`                         | generate + migrate deploy + seed                   |
-| `pnpm db:migrate` / `db:reset`          | новая миграция / сброс БД и seed                   |
-| `pnpm db:seed` / `db:studio`            | пересоздать данные / Prisma Studio                 |
-| `pnpm lint:check` / `pnpm format:check` | oxlint / oxfmt                                     |
-| `pnpm knip`                             | неиспользуемый код                                 |
-| `pnpm test` / `test:watch`              | тесты Vitest: один прогон / режим наблюдения       |
-| `pnpm test:coverage`                    | тесты с отчётом и порогом покрытия                 |
-| `pnpm check`                            | lint + format + knip + тесты, то же, что гоняет CI |
+| Команда                                 | Что делает                                            |
+| --------------------------------------- | ----------------------------------------------------- |
+| `pnpm dev` / `build` / `start`          | разработка / production-сборка / запуск               |
+| `pnpm db:setup`                         | generate + migrate deploy + seed                      |
+| `pnpm db:migrate` / `db:reset`          | новая миграция / сброс БД и seed                      |
+| `pnpm db:seed` / `db:studio`            | пересоздать данные / Prisma Studio                    |
+| `pnpm lint:check` / `pnpm format:check` | oxlint / oxfmt                                        |
+| `pnpm knip`                             | неиспользуемый код                                    |
+| `pnpm test` / `test:watch`              | тесты Vitest: один прогон / режим наблюдения          |
+| `pnpm test:coverage`                    | тесты с отчётом и порогом покрытия                    |
+| `pnpm e2e` / `e2e:ui`                   | E2E на Playwright: сборка, свой сервер :3100, своя БД |
+| `pnpm check`                            | lint + format + knip + тесты, то же, что гоняет CI    |
 
 CI — [`.github/workflows/ci.yml`](.github/workflows/ci.yml): на push и pull request в `master` ставятся Node 22 и pnpm 12.5.1, затем `pnpm check`. Деплоя нет.
 
@@ -83,7 +84,18 @@ Vitest + Testing Library, три проекта (`vitest.config.mts`):
 
 `pnpm test:coverage` печатает отчёт и падает ниже порога (сейчас около 99% строк); CI гоняет его на каждый push и PR.
 Серверные тесты создают свою базу во временном каталоге и не трогают `prisma/data/dev.db`.
-Браузерных E2E-тестов нет; механика drag-and-drop внутри dnd-kit в тестах подменена, проверяются наши обработчики.
+
+### E2E
+
+Playwright (`e2e/`) гоняет настоящий браузер против production-сборки: `pnpm e2e`.
+Тесты сами собирают приложение, поднимают сервер на порту 3100 и используют отдельную БД `prisma/data/e2e.db`
+(рабочая `dev.db` и dev-сервер не затрагиваются); перед каждым тестом данные пересоздаются сидером.
+Локально берётся установленный Chrome, в CI ставится Chromium от Playwright.
+
+Что проверяется: открытие графика, назначение шаблона, сохранение и перезагрузка, публикация, своя смена,
+быстрое назначение по дате, правка и очистка смен, протяжка выделения, drag-and-drop **настоящей мышью**
+(шаблон → ячейка и в выделение, перенос смены, копирование с Alt, порог в 6 px), месяц и навигация, поиск,
+главная и меню, а также мобильная версия 320 px с касаниями. E2E не входит в `pnpm check`, в CI это отдельная задача.
 
 ## Дизайн
 

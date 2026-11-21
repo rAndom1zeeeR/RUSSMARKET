@@ -7,6 +7,7 @@ import {
   EXTRAS,
   LAYERS_NOTE,
   LIMITATIONS,
+  TESTING,
   REQUIREMENT_GROUPS,
   TECH_GROUPS,
   type RequirementStatus,
@@ -249,6 +250,54 @@ export function ProjectOverview() {
             <p className="text-muted-foreground mt-4 text-sm leading-5">
               <RichText>{DATABASE.caveat}</RichText>
             </p>
+          </article>
+        </div>
+      </section>
+
+      <section aria-labelledby="testing-title" className="flex flex-col gap-4">
+        <SectionTitle
+          id="testing-title"
+          hint={`Vitest + Testing Library. Порог покрытия в CI: выражения ≥ ${TESTING.thresholds.statements}%, ветки ≥ ${TESTING.thresholds.branches}%, функции ≥ ${TESTING.thresholds.functions}%, строки ≥ ${TESTING.thresholds.lines}%.`}
+        >
+          Тесты
+        </SectionTitle>
+        <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-4">
+          {[...TESTING.projects, TESTING.e2e].map(project => (
+            <article key={project.name} className={CARD}>
+              <h3 className="text-base leading-6 font-semibold">
+                <code className="bg-muted rounded px-1 py-0.5 text-[0.9em]">{project.name}</code>
+              </h3>
+              <p className="text-muted-foreground mb-3 text-xs leading-4">{project.environment}</p>
+              <p className="text-base leading-6">{project.scope}</p>
+            </article>
+          ))}
+        </div>
+        <div className="grid gap-2 lg:grid-cols-2">
+          <article className={CARD}>
+            <h3 className="mb-3 text-base leading-6 font-semibold">Что стоит знать</h3>
+            <ul className="flex flex-col gap-3">
+              {TESTING.highlights.map(item => (
+                <li key={item} className="flex gap-3 text-base leading-6">
+                  <StatusIcon status="done" />
+                  <span>
+                    <RichText>{item}</RichText>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </article>
+          <article className={CARD}>
+            <h3 className="mb-3 text-base leading-6 font-semibold">Команды</h3>
+            <dl className="flex flex-col gap-3">
+              {TESTING.commands.map(item => (
+                <div key={item.command}>
+                  <dt>
+                    <code className="bg-muted rounded px-1 py-0.5 text-[0.9em]">{item.command}</code>
+                  </dt>
+                  <dd className="text-muted-foreground text-sm leading-5">{item.purpose}</dd>
+                </div>
+              ))}
+            </dl>
           </article>
         </div>
       </section>

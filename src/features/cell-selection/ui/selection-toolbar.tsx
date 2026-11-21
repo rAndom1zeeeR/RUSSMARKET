@@ -45,15 +45,15 @@ export function SelectionToolbar({ shifts, templates }: SelectionToolbarProps) {
       aria-label="Действия с выделенными ячейками"
       className="bg-ink-bar flex h-13 items-center gap-2 rounded-lg px-2 text-sm text-white md:gap-3 md:px-3"
     >
-      <span className="hidden md:inline">Выделено:</span>
-      <Badge tone="onDark">
+      <span className="hidden shrink-0 md:inline">Выделено:</span>
+      <Badge tone="onDark" className="shrink-0">
         {keys.length} {plural(keys.length, ["ячейка", "ячейки", "ячеек"])}
       </Badge>
-      <span className="hidden text-white/90 lg:inline">
+      <span className="hidden min-w-0 truncate text-white/90 lg:inline">
         {employees.size} сотрудника(-ов) · {days.size} дн.
       </span>
 
-      <div className="ml-auto flex items-center gap-1">
+      <div className="ml-auto flex shrink-0 items-center gap-1">
         <Popover>
           <PopoverTrigger asChild>
             <Button variant="quaternary" size="sm" className={ghostButton} aria-label="Применить шаблон">

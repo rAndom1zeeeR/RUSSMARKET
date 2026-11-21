@@ -21,9 +21,11 @@ interface NavListProps {
   labelClassName?: string;
   /** Иконка по центру (рейка) или слева (развёрнутое меню). */
   centered?: boolean;
+  /** Вызывается при переходе по ссылке: выдвижное меню закрывается, иначе оно остаётся поверх новой страницы. */
+  onNavigate?: () => void;
 }
 
-function NavList({ labelClassName, centered }: NavListProps) {
+function NavList({ labelClassName, centered, onNavigate }: NavListProps) {
   const pathname = usePathname();
   return (
     <ul className="flex flex-col gap-0.5">
@@ -33,6 +35,7 @@ function NavList({ labelClassName, centered }: NavListProps) {
           <li key={label}>
             <Link
               href={href}
+              onClick={onNavigate}
               aria-current={active ? "page" : undefined}
               title={label}
               className={cn(
@@ -95,7 +98,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                     <X className="size-5" />
                   </Dialog.Close>
                 </div>
-                <NavList />
+                <NavList onNavigate={() => setDrawerOpen(false)} />
               </Dialog.Content>
             </Dialog.Portal>
           </Dialog.Root>

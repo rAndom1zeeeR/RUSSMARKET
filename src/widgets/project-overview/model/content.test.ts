@@ -1,7 +1,16 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { ARCHITECTURE, DATABASE, EXTRAS, LAYERS_NOTE, LIMITATIONS, REQUIREMENT_GROUPS, TECH_GROUPS } from "./content";
+import {
+  ARCHITECTURE,
+  DATABASE,
+  EXTRAS,
+  LAYERS_NOTE,
+  LIMITATIONS,
+  REQUIREMENT_GROUPS,
+  TECH_GROUPS,
+  TESTING,
+} from "./content";
 
 interface PackageJson {
   dependencies: Record<string, string>;
@@ -114,6 +123,47 @@ describe("раздел про базу данных", () => {
   });
 });
 
+describe("раздел про тесты", () => {
+  const vitestConfig = () => readFileSync(path.join(process.cwd(), "vitest.config.mts"), "utf8");
+
+  it("описывает три проекта Vitest, как в конфиге", () => {
+    expect(TESTING.projects.map(project => project.name)).toEqual(["unit", "server", "dom"]);
+    for (const project of TESTING.projects) expect(vitestConfig()).toContain(`name: "${project.name}"`);
+  });
+
+  it("пороги покрытия совпадают с vitest.config.mts", () => {
+    for (const [metric, value] of Object.entries(TESTING.thresholds)) {
+      expect(vitestConfig(), `порог ${metric}`).toContain(`${metric}: ${value}`);
+    }
+  });
+
+  it("E2E описан так же, как настроен: проект, порт, отдельная БД, команда", () => {
+    const config = readFileSync(path.join(process.cwd(), "playwright.config.ts"), "utf8");
+    const env = readFileSync(path.join(process.cwd(), "e2e", "support", "env.ts"), "utf8");
+    expect(config).toContain('name: "desktop"');
+    expect(config).toContain('name: "mobile"');
+    expect(env).toContain("e2e.db");
+    expect(env).toContain("3100");
+    expect(TESTING.highlights.join(" ")).toContain("e2e.db");
+    expect(TESTING.highlights.join(" ")).toContain("3100");
+    expect(TESTING.commands.map(item => item.command)).toContain("pnpm e2e");
+    expect(TESTING.e2e.scope).toContain("320");
+  });
+
+  it("команды существуют в package.json", () => {
+    const { scripts } = JSON.parse(readFileSync(path.join(process.cwd(), "package.json"), "utf8"));
+    const missing = TESTING.commands
+      .map(({ command }) => command)
+      .filter(command => !(command.replace("pnpm ", "") in scripts));
+    expect(missing).toEqual([]);
+  });
+
+  it("описания непустые", () => {
+    for (const project of TESTING.projects) expect(project.scope.length).toBeGreaterThan(20);
+    expect(TESTING.highlights.length).toBeGreaterThanOrEqual(3);
+  });
+});
+
 describe("технологии: версии совпадают с package.json", () => {
   const PACKAGE_BY_NAME: Record<string, string> = {
     "Next.js": "next",
@@ -132,6 +182,7 @@ describe("технологии: версии совпадают с package.json"
     oxlint: "oxlint",
     oxfmt: "oxfmt",
     Vitest: "vitest",
+    Playwright: "@playwright/test",
   };
 
   const items = TECH_GROUPS.flatMap(group => group.items);

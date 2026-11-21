@@ -1,7 +1,7 @@
 # AGENTS.md
 
 Next.js app «График смен» (тестовое задание Fullstack-разработчика). Фронтенд и бэкенд в одном репозитории:
-Route Handlers + Prisma 7 + SQLite. Нет авторизации и E2E; логика, сервер и компоненты покрыты тестами на Vitest.
+Route Handlers + Prisma 7 + SQLite. Нет авторизации; логика, сервер и компоненты покрыты тестами на Vitest, основные сценарии — E2E на Playwright.
 
 ## Stack
 
@@ -13,26 +13,27 @@ Route Handlers + Prisma 7 + SQLite. Нет авторизации и E2E; лог
 - Validation: zod. Dates: date-fns (ru locale)
 - React Compiler is on: `reactCompiler: true` in `next.config.ts`
 - Lint is oxlint, format is oxfmt. No ESLint or Prettier
-- Tests: Vitest 5 + Testing Library + jsdom, coverage via v8
+- Tests: Vitest 5 + Testing Library + jsdom (coverage via v8); E2E: Playwright in `e2e/`
 - Package manager is pnpm
 
 ## Commands
 
-| Task         | Command                                                               |
-| ------------ | --------------------------------------------------------------------- |
-| Install      | `pnpm install` (runs `prisma generate`)                               |
-| First run    | `cp .env.example .env`, then `pnpm db:setup`                          |
-| Dev server   | `pnpm dev` (port 3000)                                                |
-| Lint (fix)   | `pnpm lint`                                                           |
-| Lint check   | `pnpm lint:check`                                                     |
-| Format       | `pnpm format`                                                         |
-| Format check | `pnpm format:check`                                                   |
-| Unused code  | `pnpm knip`                                                           |
-| Test         | `pnpm test` (once) / `pnpm test:watch` / `pnpm test:coverage`         |
-| Check        | `pnpm check` (lint + format + knip + tests with coverage; same as CI) |
-| Build        | `pnpm build`                                                          |
-| Start        | `pnpm start`                                                          |
-| DB           | `pnpm db:setup` / `db:seed` / `db:reset` / `db:migrate` / `db:studio` |
+| Task         | Command                                                                                   |
+| ------------ | ----------------------------------------------------------------------------------------- |
+| Install      | `pnpm install` (runs `prisma generate`)                                                   |
+| First run    | `cp .env.example .env`, then `pnpm db:setup`                                              |
+| Dev server   | `pnpm dev` (port 3000)                                                                    |
+| Lint (fix)   | `pnpm lint`                                                                               |
+| Lint check   | `pnpm lint:check`                                                                         |
+| Format       | `pnpm format`                                                                             |
+| Format check | `pnpm format:check`                                                                       |
+| Unused code  | `pnpm knip`                                                                               |
+| Test         | `pnpm test` (once) / `pnpm test:watch` / `pnpm test:coverage`                             |
+| E2E          | `pnpm e2e` (builds the app, own server on :3100 and own DB; `pnpm e2e:ui` / `e2e:report`) |
+| Check        | `pnpm check` (lint + format + knip + tests with coverage; same as CI)                     |
+| Build        | `pnpm build`                                                                              |
+| Start        | `pnpm start`                                                                              |
+| DB           | `pnpm db:setup` / `db:seed` / `db:reset` / `db:migrate` / `db:studio`                     |
 
 `dev` needs `.env` (`DATABASE_URL="file:./prisma/data/dev.db"`) and a seeded DB. `build` does not touch the DB.
 Never commit `.env` or `prisma/data/*.db*`; the seed (`prisma/seed.ts`) is idempotent and rebuilds all data.
@@ -46,6 +47,7 @@ Never commit `.env` or `prisma/data/*.db*`; the seed (`prisma/seed.ts`) is idemp
 - `src/features/` — one user action per folder (grid, selection, quick assign, custom shift, dnd, toolbar, save/publish)
 - `src/entities/` — `employee`, `shift-template`, `shift`, `schedule`: `model` (types, zod schemas, store, helpers), `api` (queries), `ui`
 - `src/server/` — Prisma client, repositories, HTTP helpers. **The only place that touches the DB**; files import `server-only`
+- `e2e/` — Playwright specs (`*.spec.ts`) and `support/` (DB prep and reseed, grid locators, mouse drag helper)
 - `tests/` — shared test helpers (`fixtures`, `fetch` stub, `render`, `viewport`, `db`), setup and stubs. Test files live next to the code as `*.test.ts(x)`
 
 ## Conventions
@@ -82,7 +84,16 @@ Rules of thumb:
 - dnd-kit internals are not tested; `shift-dnd-provider.test.tsx` swaps `DndContext` for a spy and calls our handlers. Drop logic is the pure `resolveDrop` in `entities/shift/model/dnd.ts`
 - `project-overview/model/content.test.ts` checks tech versions on the overview page against `package.json`. After bumping a dependency, update `content.ts`
 - Vitest globals are off (`types: []` in tsconfig): import `describe`, `it`, `expect`, `vi` from `vitest`
-- Not covered: browser E2E. Add Playwright only together with a `package.json` entry
+
+### E2E (Playwright)
+
+- `pnpm e2e` is not part of `pnpm check`: it needs a browser and a production build. CI runs it as a separate job
+- `playwright.config.ts` builds the app and starts `next start` on port 3100 with `DATABASE_URL=file:./prisma/data/e2e.db`. It never touches `dev.db` or a running dev server. Production build on purpose: no Next dev overlay to intercept clicks
+- Locally it uses the installed Chrome (`channel: "chrome"`), nothing is downloaded. In CI it installs Playwright's Chromium
+- One worker, shared server and DB. The `test` from `e2e/support/test.ts` reseeds the DB before every test, so tests start from the same data (`prisma/seed.ts`: dates are relative to this week's Monday, use `dateOf(DAY.mon)` helpers, never hardcode dates)
+- Two projects: `desktop` (1440×900) and `mobile` (320×640, touch, only `mobile.spec.ts`)
+- Drag-and-drop uses the real mouse (`dragTo` in `e2e/support/schedule.ts`): dnd-kit starts after a 6 px move, hold `Alt` for copy
+- `e2e/` is in oxlint `ignorePatterns` but type-checked by `tsc`; `pnpm format` covers it
 
 ## Known state
 

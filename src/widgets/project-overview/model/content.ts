@@ -171,7 +171,7 @@ export const EXTRAS: readonly Extra[] = [
   },
   {
     title: "Автотесты",
-    text: "Vitest + Testing Library: логика, сервер на временной SQLite с боевыми миграциями, компоненты и страница целиком. Порог покрытия проверяет CI.",
+    text: "Vitest + Testing Library: логика, сервер на временной SQLite, компоненты и страница целиком. Playwright: основные сценарии и перетаскивание настоящей мышью. Всё это гоняет CI.",
   },
   {
     title: "Уведомления и сворачиваемое меню",
@@ -179,7 +179,7 @@ export const EXTRAS: readonly Extra[] = [
   },
   {
     title: "CI",
-    text: "GitHub Actions на push и pull request: oxlint, oxfmt --check и knip (`pnpm check`).",
+    text: "GitHub Actions на push и pull request: oxlint, oxfmt --check, knip, тесты с порогом покрытия и отдельная задача с E2E на Playwright.",
   },
 ];
 
@@ -226,6 +226,7 @@ export const TECH_GROUPS: readonly TechGroup[] = [
       { name: "oxfmt", version: "0.79", purpose: "форматирование" },
       { name: "Vitest", version: "5.1", purpose: "тесты и покрытие: unit, сервер на временной SQLite, jsdom" },
       { name: "Testing Library", version: "—", purpose: "тесты компонентов глазами пользователя" },
+      { name: "Playwright", version: "1.65", purpose: "E2E в настоящем браузере: мышь, касания, перезагрузки" },
       { name: "pnpm, tsx, knip", version: "—", purpose: "пакеты, запуск сидера, поиск неиспользуемого кода" },
       { name: "GitHub Actions", version: "—", purpose: "CI: lint, format, knip на push и pull request" },
     ],
@@ -263,12 +264,57 @@ export const DATABASE = {
     "Миграция описана, но на Postgres не запускалась. Даты и время хранятся строками (`YYYY-MM-DD`, `HH:mm`) ради простоты; в Postgres их можно перевести в `Date` / `Time`.",
 } as const;
 
+export const TESTING = {
+  projects: [
+    {
+      name: "unit",
+      environment: "node",
+      scope:
+        "Даты, время, склонения, модели, zod-схемы, хранилище Zustand, логика сброса при перетаскивании, контент этой страницы.",
+    },
+    {
+      name: "server",
+      environment: "node + временная SQLite",
+      scope:
+        "Репозитории и Route Handlers на настоящей базе со схемой из миграций, транзакции, ошибки API, идемпотентность сидера.",
+    },
+    {
+      name: "dom",
+      environment: "jsdom",
+      scope:
+        "Компоненты, хуки, страницы и сквозные сценарии: выделить ячейку → шаблон → покрытие обновилось → сохранить.",
+    },
+  ],
+  e2e: {
+    name: "e2e",
+    environment: "Playwright · Chrome · production-сборка",
+    scope:
+      "Настоящий браузер и мышь: назначение и сохранение, публикация, drag-and-drop (шаблон, перенос, копирование с Alt), месяц и поиск, главная, мобильная версия 320 px с касаниями.",
+  },
+  highlights: [
+    "Серверные тесты работают на отдельной временной базе и не трогают рабочую `dev.db`.",
+    "Сохранение проверено на атомарность: ошибка при вставке откатывает и удаления.",
+    "Версии технологий на этой странице сверяются с `package.json`, чтобы текст не устаревал.",
+    "E2E работают на отдельной базе `e2e.db` и своём сервере (порт 3100): рабочие данные и dev-сервер не затрагиваются.",
+    "CI гоняет тесты с порогом покрытия, а E2E — отдельной задачей, на каждый push и pull request.",
+  ],
+  commands: [
+    { command: "pnpm test", purpose: "один прогон всех тестов" },
+    { command: "pnpm test:watch", purpose: "режим наблюдения при разработке" },
+    { command: "pnpm test:coverage", purpose: "прогон с отчётом и проверкой порога покрытия" },
+    { command: "pnpm e2e", purpose: "E2E на Playwright: сборка, свой сервер и своя база" },
+    { command: "pnpm check", purpose: "линт, формат, knip и тесты с покрытием (E2E отдельно)" },
+  ],
+  /** Должны совпадать с `coverage.thresholds` в vitest.config.mts (проверяет content.test.ts). */
+  thresholds: { statements: 95, branches: 90, functions: 95, lines: 95 },
+} as const;
+
 export const LAYERS_NOTE =
   "Код разложен по слоям shared → entities → features → widgets → app, границы между ними проверяет линтер.";
 
 export const LIMITATIONS: readonly string[] = [
-  "Перетаскивание проверено автотестами на уровне наших обработчиков (в том числе Alt-копирование), но не реальной мышью в браузере; долгое нажатие на тач-устройстве не проверялось.",
-  "Режим «Месяц» на 320 и 640 px, а также применение шаблонов и «Своей смены» на узких экранах в браузере не проверялись.",
-  "Нет авторизации и браузерных E2E-тестов — они не входили в ТЗ; остальное покрыто Vitest.",
+  "E2E идут в Chrome (касания эмулируются): Firefox, Safari и долгое нажатие на настоящем тач-устройстве не проверялись.",
+  "Режим «Месяц» на 320 px и «Своя смена» на узких экранах в E2E не проверялись; ширина 640 px вручную и автотестами не прогонялась.",
+  "Нет авторизации — её не было в ТЗ.",
   "Быстрое назначение применяется ко всем видимым сотрудникам — допущение, в ТЗ это не уточнено.",
 ];

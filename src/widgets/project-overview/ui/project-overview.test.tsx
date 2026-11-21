@@ -1,6 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { EXTRAS, LIMITATIONS, REQUIREMENT_GROUPS, TECH_GROUPS } from "../model/content";
+import { DATABASE, EXTRAS, LIMITATIONS, REQUIREMENT_GROUPS, TECH_GROUPS, TESTING } from "../model/content";
 import { ProjectOverview } from "./project-overview";
 
 const all = REQUIREMENT_GROUPS.flatMap(group => group.items);
@@ -18,6 +18,7 @@ describe("ProjectOverview", () => {
   it("все разделы на месте", () => {
     render(<ProjectOverview />);
     for (const name of [
+      "Тесты",
       "Требования ТЗ",
       "Добавлено сверх ТЗ",
       "Технологии",
@@ -57,7 +58,9 @@ describe("ProjectOverview: содержимое", () => {
     for (const group of REQUIREMENT_GROUPS) {
       expect(screen.getByRole("heading", { level: 3, name: group.title })).toBeInTheDocument();
     }
-    expect(screen.getAllByRole("img", { name: "Выполнено" })).toHaveLength(done + 5);
+    expect(screen.getAllByRole("img", { name: "Выполнено" })).toHaveLength(
+      done + DATABASE.readiness.length + TESTING.highlights.length
+    );
     expect(screen.getAllByRole("img", { name: "Частично" })).toHaveLength(partial);
   });
 
@@ -104,6 +107,47 @@ describe("ProjectOverview: раздел про базу данных", () => {
   it("предупреждает, что миграция не проверялась", () => {
     render(<ProjectOverview />);
     expect(screen.getByText(/не запускалась/)).toBeInTheDocument();
+  });
+});
+
+describe("ProjectOverview: раздел про тесты", () => {
+  const section = () => {
+    const element = screen.getByRole("heading", { level: 2, name: "Тесты" }).closest("section");
+    if (!element) throw new Error("нет раздела «Тесты»");
+    return element;
+  };
+  const codes = () => [...section().querySelectorAll("code")].map(element => element.textContent);
+
+  it("в подзаголовке — пороги покрытия", () => {
+    render(<ProjectOverview />);
+    expect(section()).toHaveTextContent(`строки ≥ ${TESTING.thresholds.lines}%`);
+    expect(section()).toHaveTextContent(`ветки ≥ ${TESTING.thresholds.branches}%`);
+  });
+
+  it("описывает все проекты Vitest", () => {
+    render(<ProjectOverview />);
+    for (const project of TESTING.projects) {
+      expect(within(section()).getByRole("heading", { level: 3, name: project.name })).toBeInTheDocument();
+      expect(within(section()).getByText(project.scope)).toBeInTheDocument();
+    }
+  });
+
+  it("четвёртая карточка — E2E на Playwright", () => {
+    render(<ProjectOverview />);
+    expect(within(section()).getByRole("heading", { level: 3, name: TESTING.e2e.name })).toBeInTheDocument();
+    expect(within(section()).getByText(TESTING.e2e.scope)).toBeInTheDocument();
+    expect(within(section()).getByText(TESTING.e2e.environment)).toBeInTheDocument();
+  });
+
+  it("команды выводятся как код", () => {
+    render(<ProjectOverview />);
+    for (const { command } of TESTING.commands) expect(codes()).toContain(command);
+  });
+
+  it("важные детали выводятся, рабочая dev.db — как код", () => {
+    render(<ProjectOverview />);
+    expect(within(section()).getByText(/не трогают рабочую/)).toBeInTheDocument();
+    expect(codes()).toContain("dev.db");
   });
 });
 

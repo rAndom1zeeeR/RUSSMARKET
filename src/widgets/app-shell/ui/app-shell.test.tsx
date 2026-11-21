@@ -87,6 +87,14 @@ describe("AppShell: выдвижное меню (sm)", () => {
     expect(within(drawer).getByRole("link", { name: "Смены" })).toHaveAttribute("href", "/schedules");
   });
 
+  it("закрывается при переходе по ссылке: не остаётся поверх новой страницы", async () => {
+    render(<AppShell>x</AppShell>);
+    await userEvent.click(screen.getByRole("button", { name: "Открыть меню" }));
+    const drawer = await screen.findByRole("dialog");
+    await userEvent.click(within(drawer).getByRole("link", { name: "Смены" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
   it("закрывается кнопкой и по Esc", async () => {
     render(<AppShell>x</AppShell>);
     await userEvent.click(screen.getByRole("button", { name: "Открыть меню" }));
