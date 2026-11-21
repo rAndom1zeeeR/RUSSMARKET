@@ -2,14 +2,19 @@
 
 import { Bell, CalendarDays, Home, Menu, PanelLeft, X } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Dialog } from "radix-ui";
 import { useState, type ReactNode } from "react";
 import { cn } from "@/shared/lib/utils";
 
 const NAV = [
-  { label: "Главная", icon: Home, active: false },
-  { label: "Смены", icon: CalendarDays, active: true },
+  { label: "Главная", icon: Home, href: "/" },
+  { label: "Смены", icon: CalendarDays, href: "/schedules" },
 ] as const;
+
+function isActive(pathname: string, href: string): boolean {
+  return href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
+}
 
 interface NavListProps {
   /** Классы подписи пункта: в рейке подпись скрыта, в выдвижном меню видна. */
@@ -19,25 +24,29 @@ interface NavListProps {
 }
 
 function NavList({ labelClassName, centered }: NavListProps) {
+  const pathname = usePathname();
   return (
     <ul className="flex flex-col gap-0.5">
-      {NAV.map(({ label, icon: Icon, active }) => (
-        <li key={label}>
-          <Link
-            href="/"
-            aria-current={active ? "page" : undefined}
-            title={label}
-            className={cn(
-              "flex h-10 items-center gap-3 rounded-lg px-2.5 text-base font-medium",
-              centered && "justify-center lg:justify-start",
-              active ? "bg-surface" : "hover:bg-surface/60"
-            )}
-          >
-            <Icon className="size-5 shrink-0" aria-hidden />
-            <span className={labelClassName}>{label}</span>
-          </Link>
-        </li>
-      ))}
+      {NAV.map(({ label, icon: Icon, href }) => {
+        const active = isActive(pathname, href);
+        return (
+          <li key={label}>
+            <Link
+              href={href}
+              aria-current={active ? "page" : undefined}
+              title={label}
+              className={cn(
+                "flex h-10 items-center gap-3 rounded-lg px-2.5 text-base font-medium",
+                centered && "justify-center lg:justify-start",
+                active ? "bg-surface" : "hover:bg-surface/60"
+              )}
+            >
+              <Icon className="size-5 shrink-0" aria-hidden />
+              <span className={labelClassName}>{label}</span>
+            </Link>
+          </li>
+        );
+      })}
     </ul>
   );
 }
@@ -124,7 +133,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </button>
       </nav>
 
-      <main className="flex min-w-0 flex-1 flex-col gap-4 overflow-y-auto px-4 pt-4 pb-6 md:px-6 lg:gap-6 lg:overflow-hidden lg:px-[30px] lg:pt-6">
+      <main className="flex min-w-0 flex-1 flex-col gap-4 overflow-y-auto px-4 pt-4 pb-6 md:px-6 lg:gap-6 lg:px-[30px] lg:pt-6">
         {children}
       </main>
     </div>

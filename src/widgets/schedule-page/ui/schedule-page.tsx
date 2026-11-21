@@ -13,7 +13,6 @@ import { ScheduleToolbar } from "@/features/schedule-toolbar/ui/schedule-toolbar
 import { ShiftDndProvider } from "@/features/shift-dnd/ui/shift-dnd-provider";
 import { rangeTitle } from "@/shared/lib/date";
 import { cn } from "@/shared/lib/utils";
-import { AppShell } from "./app-shell";
 
 export function SchedulePage({ scheduleId }: { scheduleId: string }) {
   const data = useScheduleData(scheduleId);
@@ -21,11 +20,11 @@ export function SchedulePage({ scheduleId }: { scheduleId: string }) {
   const { view, range, employees, templates, shifts, coverage, usage } = data;
 
   return (
-    <AppShell>
+    <>
       <div className="flex h-10 shrink-0 items-center gap-3">
         <Link
           href="/"
-          aria-label="Назад к графикам смен"
+          aria-label="На главную"
           className="bg-surface flex size-10 shrink-0 items-center justify-center rounded-full"
         >
           <ChevronLeft className="size-5" />
@@ -84,6 +83,6 @@ export function SchedulePage({ scheduleId }: { scheduleId: string }) {
         </div>
         {hasSelection && <div className="h-16 shrink-0 lg:hidden" aria-hidden />}
       </ShiftDndProvider>
-    </AppShell>
+    </>
   );
 }
