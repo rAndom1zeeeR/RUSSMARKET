@@ -150,6 +150,9 @@
     "react/no-danger": "warn",
     "react-hooks/exhaustive-deps": "warn",
     "oxc/no-barrel-file": "off",
+    "react-perf/jsx-no-new-function-as-prop": "off",
+    "react-perf/jsx-no-new-object-as-prop": "off",
+    "react-perf/jsx-no-new-array-as-prop": "off",
     "jsx-a11y/role-has-required-aria-props": "warn",
     "jsx-a11y/no-noninteractive-element-to-interactive-role": "warn",
     "jsx-a11y/click-events-have-key-events": "warn",
@@ -237,6 +240,14 @@
           }
         ]
       }
+    },
+    {
+      "files": ["prisma/seed.ts"],
+      "rules": { "no-console": "off" }
+    },
+    {
+      "files": ["src/features/schedule-grid/ui/schedule-grid.tsx"],
+      "rules": { "react/incompatible-library": "off" }
     },
     {
       "files": ["src/shared/lib/logger/**", "src/shared/lib/dev-console.ts"],

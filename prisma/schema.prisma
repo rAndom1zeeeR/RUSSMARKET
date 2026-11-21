@@ -1,0 +1,53 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Employee {
+  id            String  @id @default(cuid())
+  fullName      String
+  role          String  @default("агент")
+  monthlyHours  Int     @default(24)
+  avatarUrl     String?
+  sort          Int     @default(0)
+  shifts        Shift[]
+}
+
+model ShiftTemplate {
+  id     String  @id @default(cuid())
+  name   String
+  start  String
+  end    String
+  color  String
+  sort   Int     @default(0)
+  shifts Shift[]
+}
+
+model Schedule {
+  id          String    @id @default(cuid())
+  title       String
+  status      String    @default("draft")
+  publishedAt DateTime?
+  updatedAt   DateTime  @updatedAt
+  shifts      Shift[]
+}
+
+model Shift {
+  id         String         @id @default(cuid())
+  scheduleId String
+  employeeId String
+  date       String
+  start      String
+  end        String
+  templateId String?
+  schedule   Schedule       @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  employee   Employee       @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  template   ShiftTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+
+  @@unique([scheduleId, employeeId, date])
+  @@index([scheduleId, date])
+}

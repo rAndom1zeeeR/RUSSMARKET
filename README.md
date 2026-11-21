@@ -1,36 +1,42 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# График смен (CRM)
 
-## Getting Started
+Next.js 16 · React 19 · TypeScript · Tailwind v4 · TanStack Query / Virtual · Zustand · dnd-kit · Prisma 7 + SQLite.
 
-First, run the development server:
+## Запуск
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
+cp .env.example .env     # DATABASE_URL="file:./prisma/data/dev.db"
+pnpm db:setup            # prisma generate + migrate deploy + seed
+pnpm dev                 # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Файл БД (`prisma/data/dev.db`) в git не хранится. Сидер (`prisma/seed.ts`) создаёт 8 сотрудников,
+3 шаблона смен (Утро / День / Вечер) и график с готовыми сменами на текущую неделю;
+его можно запускать повторно (`pnpm db:seed`) — данные пересоздаются.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Скрипты
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Команда                                 | Что делает                       |
+| --------------------------------------- | -------------------------------- |
+| `pnpm db:setup`                         | generate + migrate deploy + seed |
+| `pnpm db:migrate` / `db:reset`          | новая миграция / сброс БД и seed |
+| `pnpm db:studio`                        | Prisma Studio                    |
+| `pnpm lint:check` / `pnpm format:check` | oxlint / oxfmt                   |
+| `pnpm build`                            | production-сборка                |
 
-## Learn More
+## Возможности
 
-To learn more about Next.js, take a look at the following resources:
+- Календарь «Неделя» / «Месяц», навигация по периодам, поиск по ФИО.
+- Выделение ячеек: клик, протяжка мышью, Ctrl/⌘-клик, Shift-клик, `Esc`/«Снять».
+- Назначение смен: шаблон кликом, быстрое меню по клику на дату, «Своя смена» с произвольным временем,
+  «Изменить» время у выделенных смен, «Очистить».
+- Drag-and-drop: шаблон → ячейка (или все выделенные), смена → другая ячейка (перенос, `Alt` — копия).
+- Покрытие по датам обновляется мгновенно (красный `0` → голубой с числом).
+- Правки копятся в черновике; «Сохранить» отправляет diff одной транзакцией, «Опубликовать» доступна без несохранённых правок.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Архитектура
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+`src/shared` → `src/entities` → `src/features` → `src/widgets` → `src/app` (границы слоёв проверяет oxlint).
+Серверные данные — TanStack Query, UI-состояние и черновик правок — Zustand, БД — Prisma в `src/server` + Route Handlers `src/app/api`.
+Подробный план и допущения — в [PLAN.md](PLAN.md).

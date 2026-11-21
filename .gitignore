@@ -45,3 +45,13 @@ next-env.d.ts
 #.cursor
 #.vscode
 .codegraph
+# env example is committed
+!.env.example
+
+# database & generated prisma client
+/prisma/data/*.db*
+/src/generated
+
+# local tooling
+/.claude
+.docs

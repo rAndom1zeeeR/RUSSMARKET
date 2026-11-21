@@ -2,27 +2,104 @@
 @import "tw-animate-css";
 @import "react-day-picker/style.css";
 
+/* Дизайн-токены из Figma (переменные макета, получены через Figma MCP). */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f2f3f7;
+  --foreground: #101012;
+  --surface: #ffffff;
+  --muted: #f2f3f7;
+  --muted-foreground: #737378;
+  --line: #dedee3;
+  --surface-alt: #f8f9fb;
+  --neutral-hover: #e7e8ee;
+  --neutral-active: #cdcdd6;
+  --disabled-fg: #c1c1c3;
+
+  /* neutral (dark) buttons and selection bar */
+  --ink: #242426;
+  --ink-hover: #3c3c43;
+  --ink-active: #595961;
+  --ink-bar: #3c3c43;
+  --ink-bar-badge: #6e6e75;
+
+  /* brand */
+  --brand: #5b7dec;
+  --brand-hover: #1c4ae5;
+  --brand-active: #163bb7;
+  --brand-soft: #e8edfc;
+  --brand-soft-hover: #d2dbfa;
+  --brand-soft-active: #bbc9f7;
+  --brand-ink: #1c4ae5;
+
+  /* shifts: Accent/Brand/0, Indigo@20, Mint@12 */
+  --shift-indigo-bg: #e8edfc;
+  --shift-indigo-fg: #5b7dec;
+  --shift-violet-bg: #e9deff;
+  --shift-violet-fg: #915aff;
+  --shift-teal-bg: #e0f8f7;
+  --shift-teal-fg: #00c7be;
+  --shift-custom-bg: #5b7dec;
+  --shift-indigo-stripe: #bbc9f7;
+  --shift-violet-stripe: #c8adff;
+  --shift-teal-stripe: #b2eeeb;
+
+  /* coverage / states */
+  --danger: #dc2626;
+  --danger-soft: #fbe5e5;
+  --cell-selected-bg: #ebeffd;
+  --cell-selected-line: #a3b6f4;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-surface: var(--surface);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-line: var(--line);
+  --color-ink: var(--ink);
+  --color-ink-hover: var(--ink-hover);
+  --color-ink-active: var(--ink-active);
+  --color-ink-bar: var(--ink-bar);
+  --color-ink-bar-badge: var(--ink-bar-badge);
+  --color-surface-alt: var(--surface-alt);
+  --color-neutral-hover: var(--neutral-hover);
+  --color-neutral-active: var(--neutral-active);
+  --color-disabled-fg: var(--disabled-fg);
+  --color-shift-indigo-stripe: var(--shift-indigo-stripe);
+  --color-shift-violet-stripe: var(--shift-violet-stripe);
+  --color-shift-teal-stripe: var(--shift-teal-stripe);
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-active: var(--brand-active);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-soft-hover: var(--brand-soft-hover);
+  --color-brand-soft-active: var(--brand-soft-active);
+  --color-brand-ink: var(--brand-ink);
+  --color-shift-indigo-bg: var(--shift-indigo-bg);
+  --color-shift-indigo-fg: var(--shift-indigo-fg);
+  --color-shift-violet-bg: var(--shift-violet-bg);
+  --color-shift-violet-fg: var(--shift-violet-fg);
+  --color-shift-teal-bg: var(--shift-teal-bg);
+  --color-shift-teal-fg: var(--shift-teal-fg);
+  --color-shift-custom-bg: var(--shift-custom-bg);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-cell-selected-bg: var(--cell-selected-bg);
+  --color-cell-selected-line: var(--cell-selected-line);
+  --font-sans: var(--font-manrope);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-inter-sans), Arial, Helvetica, sans-serif;
+  font-family: var(--font-manrope), Arial, Helvetica, sans-serif;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
 }
