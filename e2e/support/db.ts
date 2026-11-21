@@ -30,8 +30,8 @@ export function prepareDatabase(): void {
   const migrations = path.join(root, "prisma", "migrations");
   // migration_lock.toml is a file. On Linux, open("…/migration_lock.toml/migration.sql") is ENOTDIR, not ENOENT.
   const names = readdirSync(migrations, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => entry.name)
+    .filter(entry => entry.isDirectory())
+    .map(entry => entry.name)
     .toSorted();
   for (const name of names) {
     sqlite.exec(readFileSync(path.join(migrations, name, "migration.sql"), "utf8"));
