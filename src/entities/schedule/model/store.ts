@@ -9,7 +9,14 @@ import { todayISO, type CalendarView } from "@/shared/lib/date";
  */
 interface ScheduleUiState {
   view: CalendarView;
-  anchor: string;
+  /** График, которому принадлежат черновик и выделение (ключ ячейки `сотрудник|дата` его не содержит). */
+  scheduleId: string | null;
+  /**
+   * Дата, от которой строится период. `null`, пока страница не смонтировалась в браузере: «сегодня»
+   * считается на клиенте (`ensureAnchor`), а не при загрузке модуля. Иначе сервер подставил бы дату
+   * своего запуска и свой часовой пояс, и серверный HTML разошёлся бы с клиентским при гидратации.
+   */
+  anchor: string | null;
   search: string;
 
   selection: ReadonlySet<string>;
@@ -22,7 +29,11 @@ interface ScheduleUiState {
   draft: Readonly<Record<string, ShiftValue | null>>;
 
   setView: (view: CalendarView) => void;
+  /** При смене графика черновик и выделение сбрасываются: правки одного графика не должны уйти в другой. */
+  bindSchedule: (scheduleId: string) => void;
   setAnchor: (anchor: string) => void;
+  /** Выставляет «сегодня», если дата ещё не задана. Вызывать только на клиенте. */
+  ensureAnchor: () => void;
   setSearch: (search: string) => void;
 
   setSelection: (keys: Iterable<string>, anchor?: string | null) => void;
@@ -38,7 +49,8 @@ interface ScheduleUiState {
 
 export const useScheduleStore = create<ScheduleUiState>(set => ({
   view: "week",
-  anchor: todayISO(),
+  scheduleId: null,
+  anchor: null,
   search: "",
 
   selection: new Set(),
@@ -50,7 +62,12 @@ export const useScheduleStore = create<ScheduleUiState>(set => ({
   draft: {},
 
   setView: view => set({ view, selection: new Set(), selectionAnchor: null }),
+  bindSchedule: scheduleId =>
+    set(state =>
+      state.scheduleId === scheduleId ? {} : { scheduleId, draft: {}, selection: new Set(), selectionAnchor: null }
+    ),
   setAnchor: anchor => set({ anchor, selection: new Set(), selectionAnchor: null }),
+  ensureAnchor: () => set(state => (state.anchor === null ? { anchor: todayISO() } : {})),
   setSearch: search => set({ search }),
 
   setSelection: (keys, anchor) =>

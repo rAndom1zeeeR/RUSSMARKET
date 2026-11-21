@@ -48,10 +48,26 @@ const SHIFTS: Cell[] = [
   tpl("emp-5", 4, "tpl-day"),
 ];
 
-/** Сидирует ту базу, на которую указывает DATABASE_URL: SQLite (file:) или Postgres (postgresql://). */
+/** `--force` или `SEED_FORCE=1`: разрешает затереть уже существующие данные. */
+const FORCE = process.argv.includes("--force") || process.env.SEED_FORCE === "1";
+
+/**
+ * Сидирует ту базу, на которую указывает DATABASE_URL: SQLite (file:) или Postgres (postgresql://).
+ * Сидер удаляет все данные, поэтому на непустой базе без `--force` он отказывается работать:
+ * случайный `pnpm db:setup` с боевым URL ничего не сотрёт.
+ */
 async function main() {
   const prisma = await createPrismaClient(process.env.DATABASE_URL ?? DEFAULT_DATABASE_URL);
   try {
+    const schedules = await prisma.schedule.count();
+    if (schedules > 0 && !FORCE) {
+      console.error(
+        `Сидер не запущен: в базе уже есть графики (${schedules}). Он удаляет все данные. ` +
+          "Чтобы пересоздать их осознанно: pnpm db:reseed (или SEED_FORCE=1)."
+      );
+      process.exitCode = 1;
+      return;
+    }
     await seed(prisma);
   } finally {
     await prisma.$disconnect();

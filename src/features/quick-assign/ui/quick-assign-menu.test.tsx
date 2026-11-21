@@ -72,7 +72,7 @@ describe("QuickAssignMenu", () => {
     expect(screen.queryByRole("button", { name: "Очистить день" })).not.toBeInTheDocument();
   });
 
-  it("учитывает только переданных сотрудников (результат поиска)", async () => {
+  it("ставит смену ровно тем сотрудникам, которых передала страница", async () => {
     renderMenu(["emp-2"]);
     await open();
     await userEvent.click(await screen.findByRole("button", { name: /Вечер/ }));

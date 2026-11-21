@@ -1,5 +1,5 @@
 {
-  "name": "nextjs-base",
+  "name": "shift-schedule",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -16,6 +16,7 @@
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:seed": "prisma db seed",
+    "db:reseed": "prisma db seed -- --force",
     "db:reset": "prisma migrate reset --force",
     "db:studio": "prisma studio",
     "db:setup": "pnpm db:generate && prisma migrate deploy && prisma db seed",

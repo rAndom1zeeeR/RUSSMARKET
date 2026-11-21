@@ -19,7 +19,9 @@ function setup(extraRoutes: Parameters<typeof stubFetch>[0] = {}) {
     },
     ...extraRoutes,
   });
-  const hook = renderHook(() => useScheduleData(SCHEDULE_ID), { wrapper: createWrapper(createTestClient()) });
+  const hook = renderHook(() => useScheduleData(SCHEDULE_ID, useScheduleStore(store => store.anchor) ?? ANCHOR), {
+    wrapper: createWrapper(createTestClient()),
+  });
   return { ...fetchMock, ...hook };
 }
 

@@ -74,7 +74,22 @@ describe("ScheduleActions: сохранение", () => {
     expect(callsTo(calls, "PUT", "/api/schedules/main/shifts")[0]?.body).toEqual({
       upserts: [{ employeeId: "emp-1", date: "2026-11-17", ...VALUE }],
       deletes: [{ employeeId: "emp-2", date: "2026-11-18" }],
+      expectedUpdatedAt: SCHEDULE.updatedAt,
     });
+  });
+
+  it("при 409 показывает ошибку, перечитывает график и оставляет черновик", async () => {
+    const { calls } = routes({
+      "PUT /api/schedules/main/shifts": { status: 409, body: { error: "График изменён другим пользователем" } },
+    });
+    state().setCells(["emp-1|2026-11-17"], VALUE);
+    renderWithClient(<ScheduleActions scheduleId={SCHEDULE_ID} />);
+    await waitFor(() => expect(callsTo(calls, "GET", "/api/schedules/main")).toHaveLength(1));
+
+    await userEvent.click(saveButton());
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("График изменён другим пользователем"));
+    await waitFor(() => expect(callsTo(calls, "GET", "/api/schedules/main").length).toBeGreaterThan(1));
+    expect(Object.keys(state().draft)).toEqual(["emp-1|2026-11-17"]);
   });
 
   it("после успеха очищает черновик и показывает тост", async () => {

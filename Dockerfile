@@ -28,7 +28,8 @@ ENV DATABASE_URL=postgresql://build:build@localhost:5432/build
 RUN pnpm db:generate && pnpm build
 
 FROM node:22-alpine AS runner
-RUN apk add --no-cache dumb-init wget \
+# wget уже есть в busybox, отдельный пакет не нужен.
+RUN apk add --no-cache dumb-init \
   && addgroup -g 1001 -S nodejs \
   && adduser -S nextjs -u 1001 -G nodejs
 WORKDIR /app
@@ -43,7 +44,7 @@ USER nextjs
 
 EXPOSE 3000
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=5 CMD sh -c "wget -qO- http://127.0.0.1:3000/ || exit 1"
+HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=5 CMD sh -c "wget -qO- http://127.0.0.1:${PORT:-3000}/api/health >/dev/null || exit 1"
 
 ENTRYPOINT ["dumb-init", "--"]
 CMD ["node", "server.js"]

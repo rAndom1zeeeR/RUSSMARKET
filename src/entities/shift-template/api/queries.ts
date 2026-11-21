@@ -4,6 +4,6 @@ import { api } from "@/shared/api/http";
 
 export const templatesQuery = queryOptions({
   queryKey: ["templates"],
-  queryFn: () => api<ShiftTemplateDTO[]>("/templates"),
+  queryFn: ({ signal }) => api<ShiftTemplateDTO[]>("/templates", { signal }),
   staleTime: Infinity,
 });

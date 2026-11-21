@@ -1,10 +1,12 @@
+import { QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useScheduleStore } from "@/entities/schedule/model/store";
 import { callsTo, stubFetch } from "../../../../tests/helpers/fetch";
 import { ANCHOR, EMPLOYEES, SCHEDULE, SHIFTS, TEMPLATES } from "../../../../tests/helpers/fixtures";
-import { renderWithClient, stubLayoutSize } from "../../../../tests/helpers/render";
+import { createTestClient, renderWithClient, stubLayoutSize } from "../../../../tests/helpers/render";
 import { SchedulePage } from "./schedule-page";
 
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn(), info: vi.fn() }, Toaster: () => null }));
@@ -151,7 +153,7 @@ describe("SchedulePage: назначение смен", () => {
     expect(screen.getByLabelText("Покрытие 2026-11-20: 3")).toBeInTheDocument();
   });
 
-  it("быстрое назначение учитывает поиск: только найденный сотрудник", async () => {
+  it("быстрое назначение ставит смену всем сотрудникам, даже когда поиск сузил список (PLAN §10.1)", async () => {
     routes();
     const { cell } = await renderPage();
 
@@ -159,10 +161,59 @@ describe("SchedulePage: назначение смен", () => {
     await waitFor(() => expect(screen.queryByText("Кузнецова Алина")).not.toBeInTheDocument());
 
     await userEvent.click(screen.getByRole("button", { name: "Быстро назначить смену на 2026-11-20" }));
-    await userEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: /День/ }));
+    const menu = await screen.findByRole("dialog");
+    expect(menu).toHaveTextContent(`${EMPLOYEES.length} сотр.`);
+    await userEvent.click(within(menu).getByRole("button", { name: /День/ }));
 
     expect(within(cell("emp-2", "2026-11-20")).getByText("10 - 18")).toBeInTheDocument();
-    expect(screen.getByLabelText("Покрытие 2026-11-20: 1")).toBeInTheDocument();
+    expect(screen.getByLabelText(`Покрытие 2026-11-20: ${EMPLOYEES.length}`)).toBeInTheDocument();
+
+    await userEvent.clear(screen.getByRole("textbox", { name: "Поиск по ФИО" }));
+    await waitFor(() => expect(screen.getByText("Кузнецова Алина")).toBeInTheDocument());
+    expect(within(cell("emp-1", "2026-11-20")).getByText("10 - 18")).toBeInTheDocument();
+    expect(within(cell("emp-3", "2026-11-20")).getByText("10 - 18")).toBeInTheDocument();
+  });
+});
+
+describe("SchedulePage: дата периода считается на клиенте", () => {
+  function serverHtml(): string {
+    const client = createTestClient();
+    return renderToString(
+      <QueryClientProvider client={client}>
+        <SchedulePage scheduleId="main" />
+      </QueryClientProvider>
+    );
+  }
+
+  it("серверный HTML не зависит от даты: ни заголовка периода, ни сетки, только заготовка", () => {
+    useScheduleStore.setState(useScheduleStore.getInitialState(), true);
+    const html = serverHtml();
+    expect(html).toContain("Загрузка графика…");
+    expect(html).not.toMatch(/ноябр|декабр|январ/);
+    expect(html).not.toContain('role="grid"');
+    // На сервере эффекты не выполняются: дата так и остаётся невыставленной.
+    expect(state().anchor).toBeNull();
+  });
+
+  it("в браузере до первой отрисовки выставляется «сегодня» по часам пользователя", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(2026, 10, 18, 9, 0));
+    useScheduleStore.setState(useScheduleStore.getInitialState(), true);
+    routes();
+
+    renderWithClient(<SchedulePage scheduleId="main" />);
+
+    expect(state().anchor).toBe("2026-11-18");
+    expect(await screen.findByRole("button", { name: "16 – 22 ноября 2026" })).toBeInTheDocument();
+    vi.useRealTimers();
+  });
+
+  it("уже выбранный период не сбрасывается на «сегодня» при повторном открытии страницы", async () => {
+    state().setAnchor("2027-03-10");
+    routes();
+    renderWithClient(<SchedulePage scheduleId="main" />);
+    expect(state().anchor).toBe("2027-03-10");
+    expect(await screen.findByRole("button", { name: "8 – 14 марта 2027" })).toBeInTheDocument();
   });
 });
 
@@ -182,6 +233,7 @@ describe("SchedulePage: сохранение", () => {
     expect(callsTo(calls, "PUT", "/api/schedules/main/shifts")[0]?.body).toEqual({
       upserts: [{ employeeId: "emp-3", date: "2026-11-16", start: "07:00", end: "15:00", templateId: "tpl-morning" }],
       deletes: [],
+      expectedUpdatedAt: expect.any(String),
     });
     await waitFor(() => expect(state().draft).toEqual({}));
   });
@@ -198,7 +250,48 @@ describe("SchedulePage: сохранение", () => {
     expect(callsTo(calls, "PUT", "/api/schedules/main/shifts")[0]?.body).toEqual({
       upserts: [],
       deletes: [{ employeeId: "emp-1", date: "2026-11-18" }],
+      expectedUpdatedAt: expect.any(String),
     });
+  });
+});
+
+describe("SchedulePage: выделение и поиск", () => {
+  it("поиск снимает выделение ячеек скрытых сотрудников, видимые остаются", async () => {
+    routes();
+    await renderPage();
+
+    state().setSelection(["emp-1|2026-11-19", "emp-2|2026-11-19"], "emp-1|2026-11-19");
+    expect(state().selection.size).toBe(2);
+
+    await userEvent.type(screen.getByRole("textbox", { name: "Поиск по ФИО" }), "Волков");
+    await waitFor(() => expect(screen.queryByText("Кузнецова Алина")).not.toBeInTheDocument());
+
+    expect([...state().selection]).toEqual(["emp-2|2026-11-19"]);
+    expect(state().selectionAnchor).toBeNull();
+  });
+});
+
+describe("SchedulePage: смена периода", () => {
+  it("пока грузится новый период, сетка помечена занятой и есть статус для скринридера", async () => {
+    let release: () => void = () => {};
+    const gate = new Promise<void>(resolve => {
+      release = resolve;
+    });
+    routes({
+      "GET /api/schedules/main/shifts": async call => {
+        if (call.url.searchParams.get("from") === "2026-11-23") await gate;
+        return { body: [] };
+      },
+    });
+    await renderPage();
+    expect(screen.getByRole("grid")).toHaveAttribute("aria-busy", "false");
+
+    await userEvent.click(screen.getByRole("button", { name: "Следующий период" }));
+    await waitFor(() => expect(screen.getByRole("grid")).toHaveAttribute("aria-busy", "true"));
+    expect(screen.getByText("Загружаем период…")).toBeInTheDocument();
+
+    release();
+    await waitFor(() => expect(screen.getByRole("grid")).toHaveAttribute("aria-busy", "false"));
   });
 });
 

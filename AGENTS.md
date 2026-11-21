@@ -33,10 +33,10 @@ Route Handlers + Prisma 7 (SQLite locally, Postgres in production). Нет ав�
 | Check        | `pnpm check` (lint + format + knip + tests with coverage; same as CI)                     |
 | Build        | `pnpm build`                                                                              |
 | Start        | `pnpm start`                                                                              |
-| DB           | `pnpm db:setup` / `db:seed` / `db:reset` / `db:migrate` / `db:studio`                     |
+| DB           | `pnpm db:setup` / `db:seed` / `db:reseed` / `db:reset` / `db:migrate` / `db:studio`       |
 
 `dev` needs `.env` (`DATABASE_URL`: `file:` for local SQLite, `postgresql://` for Postgres) and a seeded DB. `build` does not touch the DB. Never commit `.env` or `prisma/data/*.db*`. The seed (`prisma/seed.ts`) deletes and rebuilds all data: never run it against a production database that holds real edits.
-Never commit `.env` or `prisma/data/*.db*`; the seed (`prisma/seed.ts`) is idempotent and rebuilds all data.
+The seed refuses to run when schedules already exist (exit code 1); `pnpm db:reseed` / `--force` / `SEED_FORCE=1` override it. E2E and `db:reset` start from an empty or forced state.
 
 ## Layout
 
@@ -61,7 +61,9 @@ Never commit `.env` or `prisma/data/*.db*`; the seed (`prisma/seed.ts`) is idemp
 - The DB is chosen by the `DATABASE_URL` scheme, not `NODE_ENV`: `file:` → SQLite (local dev, tests, E2E), `postgresql://` → Postgres (production). Each provider has its own schema and migrations: `prisma/schema.prisma` + `prisma/migrations` (SQLite), `prisma/postgres/schema.prisma` + `prisma/postgres/migrations` (Postgres). `prisma.config.ts` and `src/server/create-client.ts` pick by URL (`prisma/database-url.ts`). Keep the model blocks of both schemas identical (`prisma/schemas.test.ts` enforces it) and add every migration to both folders. No raw SQL; only `src/server` touches the DB. Nothing migrates or seeds on boot: the production image has no Prisma CLI, run `DATABASE_URL=postgresql://… pnpm db:setup` once from outside. The Postgres path has not been run against a live database in tests
 - Request and response shapes are zod schemas in `src/entities/*/model/schemas.ts`, shared by client and Route Handlers
 - Data model: a shift is keyed by `employeeId|YYYY-MM-DD` (`cellKey`). Dates are `YYYY-MM-DD` strings, times are `HH:mm`. If end ≤ start the shift crosses midnight
-- Draft model: shown shifts = TanStack Query data overlaid with the Zustand `draft`. Coverage and template usage are derived, never stored. "Сохранить" sends a diff `{ upserts, deletes }` in one transaction; "Опубликовать" is enabled only without unsaved edits
+- Draft model: shown shifts = TanStack Query data overlaid with the Zustand `draft`. Coverage and template usage are derived, never stored. "Сохранить" sends a diff `{ upserts, deletes }` in one transaction; "Опубликовать" is enabled only without unsaved edits. On the server, `saveShifts` writes in batches inside one batch transaction (`$transaction([...])`, no interactive-transaction timeout): delete all touched cells in chunks of 400, then `createMany` in chunks of 120. Keep every query under SQLite's 999-parameter limit (Postgres allows far more); updated shifts get new ids, the client works with cells, not ids
+- Quick assign by date applies to **all** employees (`allEmployees` from `useScheduleData`), search does not narrow it (decision §10.1 in `docs/PLAN.md`)
+- The period anchor is `null` until the schedule page mounts in the browser; `ensureAnchor()` sets today in a layout effect. Never compute dates at module load or during server render: the server process lives for days and may run in another time zone, which breaks hydration. `e2e/timezone.spec.ts` guards this
 - `schedule-grid.tsx` has `"use no memo"` on purpose (TanStack Virtual returns unstable functions)
 - Colors, font (Manrope), radii come from Figma variables and live as tokens in `globals.css`. Use token classes (`bg-brand`, `text-muted-foreground`, …), not raw hex
 - Breakpoints are `sm` 320, `md` 640, `lg` 1200 (defaults are disabled). Mobile-first: unprefixed styles apply everywhere, so `sm:` means "from 320", not "tablet". Use `md:` / `lg:` to widen. The JS side is `useBreakpoint` in `src/shared/lib/use-breakpoint.ts`: keep it in sync with `globals.css`
@@ -100,10 +102,13 @@ Rules of thumb:
 
 Known problems are tracked in `docs/ANALYSIS.md` (P1–P3). Read it before touching saving, the quick-assign menu, the store or deployment. The most important ones:
 
-- `saveShifts` deletes with one `OR` over `(employeeId, date)` pairs: 500+ deletes in one save exceed the SQLite parameter limit. Upserts run one query per shift inside an interactive transaction (default 5 s timeout)
-- Decision §10.1 in `docs/PLAN.md`: quick assign by date must apply to **all** employees. The code still passes the search-filtered list, and `e2e/views.spec.ts` asserts the current behavior
-- `useScheduleStore` computes `anchor: todayISO()` at module load, also on the server (SSR), so the server-rendered period title can drift from the client
-- Mutating API routes are public in production; the seed wipes all data without a guard
+- Mutating API routes are public in production (no auth). The rest of the analysis is fixed; see the per-item notes
+- `PUT …/shifts` takes an optional `expectedUpdatedAt`: a stale value gives 409 (`ConflictError`, optimistic lock inside the batch transaction), the client refetches and keeps the draft. `GET …/shifts` is limited to 62 days (`MAX_PERIOD_DAYS`)
+- The store is bound to a schedule (`bindSchedule`): switching schedules clears the draft and selection. Search trims the selection to visible rows. `Esc` ignores events with `defaultPrevented`
+- Grid: `GridCell` is `memo` with stable handlers (read state via `useScheduleStore.getState()` and a ref), roving tabindex and arrow-key navigation live in `schedule-grid.tsx`. Keep handlers stable or the memo is lost
+- `GET /api/health` is the container healthcheck (pings the DB). The standalone build excludes SQLite via `outputFileTracingExcludes` (`next.config.ts`): production is Postgres only
+- Contrast: text tokens (`--shift-*-fg`, `--danger`, `--muted-foreground`) are darker than the Figma values to reach WCAG AA; this is a deliberate deviation. Re-check ratios before changing them
+- CI has `postgres` (migrations, seed, smoke) and `docker` (image build) jobs that have never been run locally. Server Vitest tests still use SQLite
 
 `pnpm knip` should pass. `@prisma/client` is in `package.json` → `knip.ignoreDependencies`: `src/generated` is gitignored, so knip cannot see that the generated client imports `@prisma/client/runtime/client`. Do not remove the package. Any other knip finding is real: fix it.
 

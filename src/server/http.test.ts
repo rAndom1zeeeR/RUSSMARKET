@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
+import { ConflictError } from "./errors";
 import { errorResponse, json } from "./http";
 
 async function read(response: Response): Promise<unknown> {
@@ -28,6 +29,14 @@ describe("errorResponse", () => {
     const body = await read(response);
     expect(body).toMatchObject({ error: "Некорректные данные" });
     expect(body).toHaveProperty("issues");
+  });
+
+  it("конфликт версий графика → 409 с понятным текстом", async () => {
+    const response = errorResponse(new ConflictError());
+    expect(response.status).toBe(409);
+    expect(await read(response)).toEqual({
+      error: "График изменён другим пользователем. Данные обновлены — проверьте правки и сохраните снова.",
+    });
   });
 
   it("битый JSON в теле → 400", async () => {

@@ -251,6 +251,87 @@ describe("ScheduleGrid: выделение мышью", () => {
   });
 });
 
+describe("ScheduleGrid: Esc и занятость", () => {
+  it("Esc, уже обработанный попапом (defaultPrevented), выделение не снимает", async () => {
+    const { cell } = renderGrid();
+    await userEvent.click(cell("emp-3", "2026-11-19"));
+    const event = new KeyboardEvent("keydown", { key: "Escape", cancelable: true, bubbles: true });
+    event.preventDefault();
+    act(() => {
+      window.dispatchEvent(event);
+    });
+    expect(state().selection.size).toBe(1);
+  });
+
+  it("busy: aria-busy включён", () => {
+    renderGrid({ busy: true });
+    expect(screen.getByRole("grid")).toHaveAttribute("aria-busy", "true");
+  });
+
+  it("без busy aria-busy выключен", () => {
+    renderGrid();
+    expect(screen.getByRole("grid")).toHaveAttribute("aria-busy", "false");
+  });
+});
+
+describe("ScheduleGrid: клавиатура", () => {
+  const tabbable = (container: HTMLElement) =>
+    [...container.querySelectorAll<HTMLElement>("[data-cell]")].filter(element => element.tabIndex === 0);
+
+  it("в порядке табуляции одна ячейка — первая", () => {
+    const { container, cell } = renderGrid();
+    expect(tabbable(container)).toEqual([cell("emp-1", "2026-11-16")]);
+  });
+
+  it("у ячейки есть подпись для скринридера", () => {
+    const { cell } = renderGrid();
+    const label = cell("emp-3", "2026-11-19").getAttribute("aria-label") ?? "";
+    expect(label).toContain("нет смены");
+    expect(label).toContain(EMPLOYEES[2]?.fullName);
+  });
+
+  it("стрелки двигают фокус, Space выделяет, Shift+стрелка расширяет диапазон", async () => {
+    const { cell, container } = renderGrid();
+    act(() => cell("emp-1", "2026-11-16").focus());
+
+    await userEvent.keyboard("{ArrowRight}");
+    await vi.waitFor(() => expect(document.activeElement).toBe(cell("emp-1", "2026-11-17")));
+    expect(tabbable(container)).toEqual([cell("emp-1", "2026-11-17")]);
+
+    await userEvent.keyboard("{ArrowDown}");
+    await vi.waitFor(() => expect(document.activeElement).toBe(cell("emp-2", "2026-11-17")));
+
+    await userEvent.keyboard(" ");
+    expect([...state().selection]).toEqual(["emp-2|2026-11-17"]);
+
+    await userEvent.keyboard("{Shift>}{ArrowRight}{/Shift}");
+    await vi.waitFor(() => expect(document.activeElement).toBe(cell("emp-2", "2026-11-18")));
+    expect([...state().selection].toSorted()).toEqual(["emp-2|2026-11-17", "emp-2|2026-11-18"]);
+  });
+
+  it("Home/End и границы сетки", async () => {
+    const { cell } = renderGrid();
+    act(() => cell("emp-1", "2026-11-18").focus());
+    await userEvent.keyboard("{End}");
+    await vi.waitFor(() => expect(document.activeElement).toBe(cell("emp-1", "2026-11-22")));
+    await userEvent.keyboard("{ArrowRight}{ArrowUp}");
+    expect(document.activeElement).toBe(cell("emp-1", "2026-11-22"));
+    await userEvent.keyboard("{Home}");
+    await vi.waitFor(() => expect(document.activeElement).toBe(cell("emp-1", "2026-11-16")));
+  });
+
+  it("Enter выделяет ячейку, повторный Enter снимает; прочие клавиши игнорируются", async () => {
+    const { cell } = renderGrid();
+    act(() => cell("emp-1", "2026-11-16").focus());
+    await userEvent.keyboard("{Enter}");
+    expect(state().selection.size).toBe(1);
+    await userEvent.keyboard("{Enter}");
+    expect(state().selection.size).toBe(0);
+    await userEvent.keyboard("a");
+    expect(state().selection.size).toBe(0);
+  });
+});
+
 describe("ScheduleGrid: касания", () => {
   it("тап добавляет ячейки в выделение, повторный тап убирает", () => {
     const { cell } = renderGrid();

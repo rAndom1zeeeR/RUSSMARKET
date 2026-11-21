@@ -6,11 +6,21 @@ import type { ShiftTone } from "@/entities/shift-template/model/styles";
 import type { ShiftTemplateDTO } from "@/entities/shift-template/model/types";
 import type { ShiftValue } from "@/entities/shift/model/types";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type PointerEvent,
+  type ReactNode,
+} from "react";
 import { EmployeeCell } from "@/entities/employee/ui/employee-cell";
 import { useScheduleStore } from "@/entities/schedule/model/store";
 import { cellKey, parseCellKey } from "@/entities/shift/model/cell";
 import { type CalendarView, type DateRange, dayOfMonth, weekdayShort } from "@/shared/lib/date";
+import { formatRangeFull } from "@/shared/lib/time";
 import { useBreakpoint, type Breakpoint } from "@/shared/lib/use-breakpoint";
 import { cn } from "@/shared/lib/utils";
 import { GridCell } from "./grid-cell";
@@ -41,6 +51,8 @@ interface ScheduleGridProps {
   templates: ShiftTemplateDTO[];
   /** Слот заголовка дня (меню быстрого назначения подставляется снаружи). */
   renderDayHeader: (date: string, label: ReactNode) => ReactNode;
+  /** Показаны данные прошлого периода, пока грузится новый: сетка приглушается и помечается `aria-busy`. */
+  busy?: boolean;
 }
 
 export function ScheduleGrid({
@@ -51,14 +63,14 @@ export function ScheduleGrid({
   coverage,
   templates,
   renderDayHeader,
+  busy = false,
 }: ScheduleGridProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const selection = useScheduleStore(state => state.selection);
   const setSelection = useScheduleStore(state => state.setSelection);
   const toggleCell = useScheduleStore(state => state.toggleCell);
-  const clearSelection = useScheduleStore(state => state.clearSelection);
 
-  const dragRef = useRef<{ anchor: string; base: ReadonlySet<string> } | null>(null);
+  const dragRef = useRef<{ anchor: string } | null>(null);
 
   const breakpoint = useBreakpoint();
   // Ширина области сетки: по ней на lg выбираем полный или компактный вариант.
@@ -121,38 +133,131 @@ export function ScheduleGrid({
     return keys;
   };
 
-  const handleCellPointerDown = (event: PointerEvent<HTMLDivElement>, employeeId: string, date: string) => {
+  // Актуальные значения для стабильных обработчиков ячеек: ссылки на функции не меняются между рендерами,
+  // поэтому `memo(GridCell)` пропускает ячейки, у которых ничего не изменилось.
+  const latest = useRef({ shifts, rectKeys });
+  useLayoutEffect(() => {
+    latest.current = { shifts, rectKeys };
+  });
+
+  const handleCellPointerDown = useCallback((event: PointerEvent<HTMLDivElement>, employeeId: string, date: string) => {
     if (event.button !== 0) return;
     const key = cellKey(employeeId, date);
     const state = useScheduleStore.getState();
 
     // Тач: тап добавляет/убирает ячейку (нет Ctrl и протяжки — они конфликтуют со скроллом).
     if (event.pointerType === "touch") {
-      toggleCell(key);
+      state.toggleCell(key);
       return;
     }
 
     if (event.shiftKey && state.selectionAnchor) {
-      setSelection(rectKeys(state.selectionAnchor, key));
+      state.setSelection(latest.current.rectKeys(state.selectionAnchor, key));
       return;
     }
     if (event.ctrlKey || event.metaKey) {
-      toggleCell(key);
+      state.toggleCell(key);
       return;
     }
     if (state.selection.size === 1 && state.selection.has(key)) {
-      clearSelection();
+      state.clearSelection();
       return;
     }
-    setSelection([key], key);
+    state.setSelection([key], key);
     // Протяжка выделения — только с пустой ячейки (с заполненной начинается drag-and-drop).
-    if (!shifts.has(key)) dragRef.current = { anchor: key, base: new Set() };
-  };
+    if (!latest.current.shifts.has(key)) dragRef.current = { anchor: key };
+  }, []);
 
-  const handleCellPointerEnter = (employeeId: string, date: string) => {
+  const handleCellPointerEnter = useCallback((employeeId: string, date: string) => {
     const drag = dragRef.current;
     if (!drag) return;
-    setSelection(rectKeys(drag.anchor, cellKey(employeeId, date)), drag.anchor);
+    useScheduleStore
+      .getState()
+      .setSelection(latest.current.rectKeys(drag.anchor, cellKey(employeeId, date)), drag.anchor);
+  }, []);
+
+  // --- Клавиатура: roving tabindex, стрелки, Home/End, Space/Enter — выделить, Shift+стрелки — диапазон.
+  const [focusKey, setFocusKey] = useState<string | null>(null);
+  const handleCellFocus = useCallback((key: string) => setFocusKey(key), []);
+
+  const firstEmployee = employees[0];
+  const firstDay = range.days[0];
+  const firstKey = firstEmployee && firstDay ? cellKey(firstEmployee.id, firstDay) : null;
+  const focusParsed = focusKey === null ? null : parseCellKey(focusKey);
+  // Ячейка, на которой был фокус, могла исчезнуть (поиск, смена периода) — тогда табуляция возвращается к первой.
+  const tabbableKey =
+    focusParsed && employeeIndex.has(focusParsed.employeeId) && dayIndex.has(focusParsed.date) ? focusKey : firstKey;
+
+  const focusCell = (key: string, row: number) => {
+    setFocusKey(key);
+    rowVirtualizer.scrollToIndex(row);
+    // Строка может быть ещё не отрисована (виртуализация) — ждём её несколько кадров.
+    let attempts = 0;
+    const attempt = () => {
+      const element = scrollRef.current?.querySelector<HTMLElement>(`[data-cell="${CSS.escape(key)}"]`);
+      if (element) {
+        element.focus();
+        element.scrollIntoView({ block: "nearest", inline: "nearest" });
+      } else if (attempts++ < 10) {
+        requestAnimationFrame(attempt);
+      }
+    };
+    attempt();
+  };
+
+  const handleGridKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    const element = event.target instanceof HTMLElement ? event.target.closest<HTMLElement>("[data-cell]") : null;
+    const key = element?.dataset.cell;
+    if (!key) return;
+    const { employeeId, date } = parseCellKey(key);
+    const row = employeeIndex.get(employeeId);
+    const column = dayIndex.get(date);
+    if (row === undefined || column === undefined) return;
+
+    let nextRow = row;
+    let nextColumn = column;
+    switch (event.key) {
+      case "ArrowUp":
+        nextRow = row - 1;
+        break;
+      case "ArrowDown":
+        nextRow = row + 1;
+        break;
+      case "ArrowLeft":
+        nextColumn = column - 1;
+        break;
+      case "ArrowRight":
+        nextColumn = column + 1;
+        break;
+      case "Home":
+        nextColumn = 0;
+        break;
+      case "End":
+        nextColumn = range.days.length - 1;
+        break;
+      case " ":
+      case "Enter":
+        event.preventDefault();
+        toggleCell(key);
+        return;
+      default:
+        return;
+    }
+
+    event.preventDefault();
+    nextRow = Math.min(Math.max(nextRow, 0), employees.length - 1);
+    nextColumn = Math.min(Math.max(nextColumn, 0), range.days.length - 1);
+    const nextEmployee = employees[nextRow];
+    const nextDay = range.days[nextColumn];
+    if (!nextEmployee || !nextDay) return;
+    const nextKey = cellKey(nextEmployee.id, nextDay);
+    if (nextKey === key) return;
+
+    if (event.shiftKey) {
+      const anchor = useScheduleStore.getState().selectionAnchor ?? key;
+      setSelection(rectKeys(anchor, nextKey), anchor);
+    }
+    focusCell(nextKey, nextRow);
   };
 
   useEffect(() => {
@@ -160,7 +265,8 @@ export function ScheduleGrid({
       dragRef.current = null;
     };
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") useScheduleStore.getState().clearSelection();
+      // Esc, который уже обработал попап или диалог (они вызывают preventDefault), выделение не трогает.
+      if (event.key === "Escape" && !event.defaultPrevented) useScheduleStore.getState().clearSelection();
     };
     window.addEventListener("pointerup", stop);
     window.addEventListener("pointercancel", stop);
@@ -179,9 +285,13 @@ export function ScheduleGrid({
       aria-label="График смен"
       aria-rowcount={employees.length}
       aria-colcount={range.days.length}
+      aria-busy={busy}
+      tabIndex={-1}
+      onKeyDown={handleGridKeyDown}
       className={cn(
-        "relative max-h-[70dvh] min-h-0 flex-none overflow-auto lg:max-h-none lg:flex-1",
-        !scrollsX && "scrollbar-none [&::-webkit-scrollbar]:hidden"
+        "relative max-h-[70dvh] min-h-0 flex-none overflow-auto transition-opacity lg:max-h-none lg:flex-1",
+        !scrollsX && "scrollbar-none [&::-webkit-scrollbar]:hidden",
+        busy && "opacity-60"
       )}
     >
       <div style={{ minWidth }}>
@@ -249,6 +359,9 @@ export function ScheduleGrid({
                   {range.days.map(day => {
                     const key = cellKey(employee.id, day);
                     const value = shifts.get(key);
+                    const label = `${employee.fullName}, ${weekdayShort(day)} ${dayOfMonth(day)}: ${
+                      value ? formatRangeFull(value.start, value.end) : "нет смены"
+                    }`;
                     return (
                       <GridCell
                         key={day}
@@ -259,6 +372,9 @@ export function ScheduleGrid({
                         selected={selection.has(key)}
                         striped={striped}
                         view={view}
+                        label={label}
+                        tabbable={key === tabbableKey}
+                        onCellFocus={handleCellFocus}
                         onCellPointerDown={handleCellPointerDown}
                         onCellPointerEnter={handleCellPointerEnter}
                       />

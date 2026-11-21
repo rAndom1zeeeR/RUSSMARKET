@@ -43,6 +43,70 @@ jobs:
       - name: Test
         run: pnpm test:coverage
 
+  postgres:
+    name: postgres (migrations, seed, smoke)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: app
+          POSTGRES_PASSWORD: app
+          POSTGRES_DB: shifts
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U app -d shifts"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://app:app@localhost:5432/shifts
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.5.1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Migrations and seed on Postgres
+        run: pnpm db:setup
+
+      - name: Build
+        run: pnpm build
+
+      - name: Smoke test against Postgres
+        run: |
+          PORT=3200 pnpm start &
+          for i in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:3200/api/health && break
+            sleep 2
+          done
+          curl -fsS http://127.0.0.1:3200/api/health | grep '"status":"ok"'
+          curl -fsS http://127.0.0.1:3200/api/employees | grep -q 'Кузнецова'
+          curl -fsS http://127.0.0.1:3200/api/templates | grep -q 'Утро'
+
+      - name: Seed refuses to overwrite existing data
+        run: |
+          if pnpm db:seed; then echo "seed must refuse on a non-empty database"; exit 1; fi
+
+  docker:
+    name: docker build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t shifts:ci .
+
   e2e:
     name: e2e (playwright)
     runs-on: ubuntu-latest

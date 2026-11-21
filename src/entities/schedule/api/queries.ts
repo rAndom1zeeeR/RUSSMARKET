@@ -6,7 +6,7 @@ import { api } from "@/shared/api/http";
 export const scheduleQuery = (scheduleId: string) =>
   queryOptions({
     queryKey: ["schedule", scheduleId],
-    queryFn: () => api<ScheduleDTO>(`/schedules/${scheduleId}`),
+    queryFn: ({ signal }) => api<ScheduleDTO>(`/schedules/${scheduleId}`, { signal }),
   });
 
 export function usePublishSchedule(scheduleId: string) {

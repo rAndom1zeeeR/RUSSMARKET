@@ -1,22 +1,18 @@
 import "server-only";
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
+import { ConflictError, prismaCode } from "./errors";
 
 export function json(data: unknown, status = 200): NextResponse {
   return NextResponse.json(data, { status });
 }
 
-/** Код ошибки Prisma, если он есть (P2003 — нарушение связи, P2025 — запись не найдена). */
-function prismaCode(error: unknown): string | null {
-  if (typeof error === "object" && error !== null && "code" in error && typeof error.code === "string") {
-    return error.code;
-  }
-  return null;
-}
-
 export function errorResponse(error: unknown): NextResponse {
   if (error instanceof ZodError) {
     return json({ error: "Некорректные данные", issues: error.issues }, 400);
+  }
+  if (error instanceof ConflictError) {
+    return json({ error: error.message }, 409);
   }
   // `request.json()` бросает SyntaxError на битом теле — это ошибка клиента, а не сервера.
   if (error instanceof SyntaxError) {

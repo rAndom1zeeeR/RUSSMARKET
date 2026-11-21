@@ -75,17 +75,18 @@ test.describe("поиск по ФИО", () => {
     await expect(page.getByText("Сотрудники не найдены")).toBeVisible();
   });
 
-  test("быстрое назначение по дате применяется только к найденным сотрудникам", async ({ page }) => {
+  test("быстрое назначение по дате ставит смену всем, даже когда поиск сузил список (PLAN §10.1)", async ({ page }) => {
     await openSchedule(page);
     await page.getByRole("textbox", { name: "Поиск по ФИО" }).fill("новиков");
     await expect(page.getByRole("rowheader")).toHaveCount(1);
 
     await page.getByRole("button", { name: `Быстро назначить смену на ${dateOf(DAY.mon)}` }).click();
+    await expect(page.getByRole("dialog")).toContainText("8 сотр.");
     await page.getByRole("dialog").getByRole("button", { name: /День/ }).click();
 
-    await expect(coverage(page, DAY.mon, 1)).toBeVisible();
+    await expect(coverage(page, DAY.mon, 8)).toBeVisible();
     await page.getByRole("button", { name: "Очистить поиск" }).click();
-    await expect(cell(page, EMP.kuznetsova, DAY.mon).getByText(/\d - \d/)).toHaveCount(0);
+    await expect(cell(page, EMP.kuznetsova, DAY.mon).getByText("10 - 18")).toBeVisible();
     await expect(cell(page, EMP.novikov, DAY.mon).getByText("10 - 18")).toBeVisible();
   });
 });

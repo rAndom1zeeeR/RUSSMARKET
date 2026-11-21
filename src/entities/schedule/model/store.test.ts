@@ -22,13 +22,27 @@ describe("начальное состояние", () => {
     expect(state().draft).toEqual({});
   });
 
-  it("якорь — сегодняшняя дата", async () => {
-    vi.useFakeTimers();
+  it("при загрузке модуля дата периода не считается: anchor = null", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date(2026, 10, 21));
     vi.resetModules();
     const { useScheduleStore: fresh } = await import("./store");
-    expect(fresh.getState().anchor).toBe("2026-11-21");
+    expect(fresh.getState().anchor).toBeNull();
     vi.useRealTimers();
+  });
+
+  it("ensureAnchor выставляет «сегодня» по часам того, кто вызывает", () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(2026, 10, 21, 23, 30));
+    state().ensureAnchor();
+    expect(state().anchor).toBe("2026-11-21");
+    vi.useRealTimers();
+  });
+
+  it("ensureAnchor не перетирает уже выбранный период", () => {
+    state().setAnchor("2027-03-10");
+    state().ensureAnchor();
+    expect(state().anchor).toBe("2027-03-10");
   });
 });
 
@@ -131,5 +145,28 @@ describe("черновик", () => {
     state().setCells([A, B], VALUE);
     state().clearDraft();
     expect(state().draft).toEqual({});
+  });
+});
+
+describe("привязка к графику", () => {
+  const value = { start: "09:00", end: "17:00", templateId: null };
+
+  it("при смене графика черновик и выделение сбрасываются", () => {
+    useScheduleStore.getState().bindSchedule("a");
+    useScheduleStore.getState().setCells(["emp-1|2026-11-17"], value);
+    useScheduleStore.getState().setSelection(["emp-1|2026-11-17"], "emp-1|2026-11-17");
+
+    useScheduleStore.getState().bindSchedule("b");
+
+    expect(useScheduleStore.getState().scheduleId).toBe("b");
+    expect(useScheduleStore.getState().draft).toEqual({});
+    expect(useScheduleStore.getState().selection.size).toBe(0);
+  });
+
+  it("повторная привязка к тому же графику ничего не трогает", () => {
+    useScheduleStore.getState().bindSchedule("a");
+    useScheduleStore.getState().setCells(["emp-1|2026-11-17"], value);
+    useScheduleStore.getState().bindSchedule("a");
+    expect(Object.keys(useScheduleStore.getState().draft)).toEqual(["emp-1|2026-11-17"]);
   });
 });

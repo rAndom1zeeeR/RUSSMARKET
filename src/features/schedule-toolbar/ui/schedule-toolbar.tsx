@@ -42,7 +42,7 @@ export function ScheduleToolbar({ title }: { title: string }) {
           variant="secondary"
           size="icon"
           aria-label="Предыдущий период"
-          onClick={() => setAnchor(stepAnchor(view, anchor, -1))}
+          onClick={() => anchor && setAnchor(stepAnchor(view, anchor, -1))}
         >
           <ChevronLeft />
         </Button>
@@ -59,7 +59,7 @@ export function ScheduleToolbar({ title }: { title: string }) {
           variant="secondary"
           size="icon"
           aria-label="Следующий период"
-          onClick={() => setAnchor(stepAnchor(view, anchor, 1))}
+          onClick={() => anchor && setAnchor(stepAnchor(view, anchor, 1))}
         >
           <ChevronRight />
         </Button>

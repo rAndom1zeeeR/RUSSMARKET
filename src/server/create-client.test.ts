@@ -22,7 +22,7 @@ describe("createPrismaClient", () => {
 
   it("postgresql:// → клиент Postgres, без попытки подключиться при создании", async () => {
     // Хоста нет: если бы клиент подключался при создании, тест упал бы.
-    const client = await createPrismaClient("postgresql://user:pass@postgres.invalid:5432/app");
+    const client = await createPrismaClient("postgresql://user:pass@127.0.0.1:1/app");
     try {
       expect(activeProvider(client)).toBe("postgresql");
     } finally {
@@ -31,7 +31,7 @@ describe("createPrismaClient", () => {
   });
 
   it("postgres:// (короткая форма) тоже даёт клиент Postgres", async () => {
-    const client = await createPrismaClient("postgres://user:pass@postgres.invalid:5432/app");
+    const client = await createPrismaClient("postgres://user:pass@127.0.0.1:1/app");
     try {
       expect(activeProvider(client)).toBe("postgresql");
     } finally {
@@ -40,7 +40,7 @@ describe("createPrismaClient", () => {
   });
 
   it("недоступный Postgres сообщает ошибку только при запросе, а не при создании клиента", async () => {
-    const client = await createPrismaClient("postgresql://user:pass@postgres.invalid:5432/app");
+    const client = await createPrismaClient("postgresql://user:pass@127.0.0.1:1/app");
     try {
       await expect(client.employee.count()).rejects.toThrow(/.+/);
     } finally {

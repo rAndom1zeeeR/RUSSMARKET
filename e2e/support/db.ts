@@ -43,7 +43,7 @@ export function prepareDatabase(): void {
 export function reseed(): void {
   execFileSync(process.execPath, [requireFromRoot.resolve("tsx/cli"), "prisma/seed.ts"], {
     cwd: root,
-    env: { ...process.env, DATABASE_URL },
+    env: { ...process.env, DATABASE_URL, SEED_FORCE: "1" },
     stdio: "pipe",
   });
 }

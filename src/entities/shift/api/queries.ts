@@ -3,12 +3,12 @@ import type { ShiftDTO } from "../model/types";
 import type { ScheduleDTO } from "@/entities/schedule/model/types";
 import { keepPreviousData, queryOptions, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { api } from "@/shared/api/http";
+import { api, ApiError } from "@/shared/api/http";
 
 export const shiftsQuery = (scheduleId: string, from: string, to: string) =>
   queryOptions({
     queryKey: ["shifts", scheduleId, from, to],
-    queryFn: () => api<ShiftDTO[]>(`/schedules/${scheduleId}/shifts?from=${from}&to=${to}`),
+    queryFn: ({ signal }) => api<ShiftDTO[]>(`/schedules/${scheduleId}/shifts?from=${from}&to=${to}`, { signal }),
     placeholderData: keepPreviousData,
   });
 
@@ -26,6 +26,16 @@ export function useSaveShifts(scheduleId: string, onSaved: () => void) {
       onSaved();
       toast.success("График сохранён");
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: async (error: Error) => {
+      toast.error(error.message);
+      // 409: график изменили после загрузки. Подтягиваем свежие данные и версию; черновик остаётся,
+      // поэтому следующее сохранение пройдёт уже поверх актуального состояния.
+      if (error instanceof ApiError && error.status === 409) {
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ["schedule", scheduleId] }),
+          queryClient.invalidateQueries({ queryKey: ["shifts", scheduleId] }),
+        ]);
+      }
+    },
   });
 }

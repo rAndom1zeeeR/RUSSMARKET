@@ -4,6 +4,6 @@ import { api } from "@/shared/api/http";
 
 export const employeesQuery = queryOptions({
   queryKey: ["employees"],
-  queryFn: () => api<EmployeeDTO[]>("/employees"),
+  queryFn: ({ signal }) => api<EmployeeDTO[]>("/employees", { signal }),
   staleTime: Infinity,
 });

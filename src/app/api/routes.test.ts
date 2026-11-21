@@ -78,6 +78,62 @@ describe("GET /api/schedules/:id/shifts", () => {
   });
 });
 
+describe("GET /api/schedules/:id/shifts: период", () => {
+  it.each([
+    ["длиннее лимита", "2026-01-01", "2026-03-04"],
+    ["задом наперёд", "2026-11-22", "2026-11-16"],
+    ["«за всё время»", "1900-01-01", "2999-12-31"],
+  ])("400: период %s", async (_name, from, to) => {
+    const response = await shiftsOf(SCHEDULE_ID, from, to);
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({ error: "Некорректные данные" });
+  });
+
+  it("месяц отдаётся", async () => {
+    expect((await shiftsOf(SCHEDULE_ID, "2026-11-01", "2026-11-30")).status).toBe(200);
+  });
+});
+
+describe("PUT /api/schedules/:id/shifts: одновременная правка", () => {
+  const scheduleStamp = async () =>
+    (
+      (await (await getSchedule(new Request(url(`/schedules/${SCHEDULE_ID}`)), ctx(SCHEDULE_ID))).json()) as {
+        updatedAt: string;
+      }
+    ).updatedAt;
+
+  it("с актуальной версией — 200", async () => {
+    const response = await put(SCHEDULE_ID, {
+      upserts: [SHIFT],
+      deletes: [],
+      expectedUpdatedAt: await scheduleStamp(),
+    });
+    expect(response.status).toBe(200);
+  });
+
+  it("с устаревшей версией — 409, смены не записаны", async () => {
+    const stale = await scheduleStamp();
+    await new Promise(resolve => setTimeout(resolve, 5));
+    await put(SCHEDULE_ID, { upserts: [SHIFT], deletes: [] });
+
+    const response = await put(SCHEDULE_ID, {
+      upserts: [{ ...SHIFT, employeeId: "emp-2" }],
+      deletes: [],
+      expectedUpdatedAt: stale,
+    });
+
+    expect(response.status).toBe(409);
+    expect(await response.json()).toMatchObject({ error: expect.stringContaining("изменён другим пользователем") });
+    const saved: { employeeId: string }[] = await (await shiftsOf(SCHEDULE_ID, "2026-11-17", "2026-11-17")).json();
+    expect(saved.map(shift => shift.employeeId)).toEqual(["emp-1"]);
+  });
+
+  it("версия в неверном формате — 400", async () => {
+    const response = await put(SCHEDULE_ID, { upserts: [], deletes: [], expectedUpdatedAt: "вчера" });
+    expect(response.status).toBe(400);
+  });
+});
+
 describe("PUT /api/schedules/:id/shifts", () => {
   it("сохраняет diff и возвращает график", async () => {
     const response = await put(SCHEDULE_ID, { upserts: [SHIFT], deletes: [] });

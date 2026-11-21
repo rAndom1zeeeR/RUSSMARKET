@@ -20,7 +20,12 @@ export function ScheduleActions({ scheduleId }: { scheduleId: string }) {
   const dirty = Object.keys(draft).length > 0;
 
   const handleSave = () => {
-    const payload: SaveShiftsPayload = { upserts: [], deletes: [] };
+    // updatedAt — версия, которую видел пользователь: если график изменили, сервер ответит 409, а не затрёт чужое.
+    const payload: SaveShiftsPayload = {
+      upserts: [],
+      deletes: [],
+      ...(schedule ? { expectedUpdatedAt: schedule.updatedAt } : {}),
+    };
     for (const [key, value] of Object.entries(draft)) {
       const { employeeId, date } = parseCellKey(key);
       if (value) payload.upserts.push({ employeeId, date, ...value });

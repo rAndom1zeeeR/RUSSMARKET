@@ -13,9 +13,8 @@ import { getRange } from "@/shared/lib/date";
  * плюс наложенный черновик правок из Zustand.
  * Покрытие и счётчики шаблонов — производные, поэтому обновляются при любой правке.
  */
-export function useScheduleData(scheduleId: string) {
+export function useScheduleData(scheduleId: string, anchor: string) {
   const view = useScheduleStore(state => state.view);
-  const anchor = useScheduleStore(state => state.anchor);
   const search = useScheduleStore(state => state.search);
   const draft = useScheduleStore(state => state.draft);
 
@@ -60,10 +59,14 @@ export function useScheduleData(scheduleId: string) {
     view,
     range,
     employees,
+    /** Все сотрудники без учёта поиска: быстрое назначение по дате ставит смену всем (docs/PLAN.md §10.1). */
+    allEmployees,
     templates,
     shifts,
     coverage,
     usage,
+    /** Показаны данные прошлого периода, пока грузится новый (`keepPreviousData`). */
+    isPlaceholderData: shiftsResult.isPlaceholderData,
     isLoading: employeesResult.isPending || templatesResult.isPending || shiftsResult.isPending,
     error: employeesResult.error ?? templatesResult.error ?? shiftsResult.error,
   };
