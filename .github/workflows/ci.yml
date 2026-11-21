@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   check:
-    name: lint, format, knip
+    name: lint, format, knip, test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -39,3 +39,6 @@ jobs:
 
       - name: Knip
         run: pnpm knip
+
+      - name: Test
+        run: pnpm test:coverage

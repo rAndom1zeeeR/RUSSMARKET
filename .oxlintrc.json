@@ -68,8 +68,21 @@
   "rules": {
     "typescript/no-explicit-any": "error",
     "typescript/no-require-imports": "error",
-    "typescript/no-floating-promises": ["error", { "ignoreVoid": true }],
-    "typescript/no-misused-promises": ["error", { "checksVoidReturn": { "attributes": false, "arguments": false } }],
+    "typescript/no-floating-promises": [
+      "error",
+      {
+        "ignoreVoid": true
+      }
+    ],
+    "typescript/no-misused-promises": [
+      "error",
+      {
+        "checksVoidReturn": {
+          "attributes": false,
+          "arguments": false
+        }
+      }
+    ],
     "typescript/await-thenable": "error",
     "typescript/promise-function-async": "off",
     "typescript/explicit-function-return-type": "off",
@@ -243,11 +256,15 @@
     },
     {
       "files": ["prisma/seed.ts"],
-      "rules": { "no-console": "off" }
+      "rules": {
+        "no-console": "off"
+      }
     },
     {
       "files": ["src/features/schedule-grid/ui/schedule-grid.tsx"],
-      "rules": { "react/incompatible-library": "off" }
+      "rules": {
+        "react/incompatible-library": "off"
+      }
     },
     {
       "files": ["src/shared/lib/logger/**", "src/shared/lib/dev-console.ts"],
@@ -256,7 +273,14 @@
       }
     },
     {
-      "files": ["**/*.{spec,test}.{ts,tsx}", "**/*.stories.{ts,tsx}", ".storybook/**"],
+      "files": [
+        "**/*.{spec,test}.{ts,tsx}",
+        "tests/**/*",
+        "vitest.setup.ts",
+        "vitest.config.mts",
+        "**/*.stories.{ts,tsx}",
+        ".storybook/**"
+      ],
       "rules": {
         "typescript/no-unsafe-type-assertion": "off",
         "typescript/unbound-method": "off",
@@ -264,7 +288,8 @@
         "react-perf/jsx-no-new-function-as-prop": "off",
         "react-perf/jsx-no-new-object-as-prop": "off",
         "react-perf/jsx-no-new-array-as-prop": "off",
-        "react-perf/jsx-no-jsx-as-prop": "off"
+        "react-perf/jsx-no-jsx-as-prop": "off",
+        "security/detect-non-literal-fs-filename": "off"
       }
     },
     {

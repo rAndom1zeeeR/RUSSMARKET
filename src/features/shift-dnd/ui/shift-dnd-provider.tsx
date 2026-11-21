@@ -17,8 +17,7 @@ import {
 import { useRef, useState, type ReactNode } from "react";
 import { useScheduleStore } from "@/entities/schedule/model/store";
 import { TemplateCard } from "@/entities/shift-template/ui/template-card";
-import { isDragData, type DragData } from "@/entities/shift/model/dnd";
-import { templateValue } from "@/entities/shift/model/value";
+import { isDragData, resolveDrop, type DragData } from "@/entities/shift/model/dnd";
 import { ShiftChip } from "@/entities/shift/ui/shift-chip";
 
 interface ShiftDndProviderProps {
@@ -55,17 +54,11 @@ export function ShiftDndProvider({ children, view, templates }: ShiftDndProvider
     if (!isDragData(data)) return;
     const targetKey = String(over.id);
 
-    if (data.kind === "template") {
-      const { selection } = useScheduleStore.getState();
-      const keys = selection.has(targetKey) ? [...selection] : [targetKey];
-      setCells(keys, templateValue(data.template));
-      return;
-    }
-
-    if (data.key === targetKey) return;
-    setCells([targetKey], data.value);
-    if (!copyRef.current) setCells([data.key], null);
-    setSelection([targetKey], targetKey);
+    const { selection } = useScheduleStore.getState();
+    const result = resolveDrop(data, targetKey, selection, copyRef.current);
+    if (!result) return;
+    for (const { keys, value } of result.assignments) setCells(keys, value);
+    if (result.select) setSelection(result.select, result.select[0]);
   };
 
   const toneByTemplate = new Map<string, ShiftTone>(templates.map(t => [t.id, t.color]));

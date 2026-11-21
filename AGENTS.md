@@ -1,7 +1,7 @@
 # AGENTS.md
 
 Next.js app «График смен» (тестовое задание Fullstack-разработчика). Фронтенд и бэкенд в одном репозитории:
-Route Handlers + Prisma 7 + SQLite. Нет авторизации, тестов и E2E.
+Route Handlers + Prisma 7 + SQLite. Нет авторизации и E2E; логика, сервер и компоненты покрыты тестами на Vitest.
 
 ## Stack
 
@@ -13,6 +13,7 @@ Route Handlers + Prisma 7 + SQLite. Нет авторизации, тестов 
 - Validation: zod. Dates: date-fns (ru locale)
 - React Compiler is on: `reactCompiler: true` in `next.config.ts`
 - Lint is oxlint, format is oxfmt. No ESLint or Prettier
+- Tests: Vitest 5 + Testing Library + jsdom, coverage via v8
 - Package manager is pnpm
 
 ## Commands
@@ -27,7 +28,8 @@ Route Handlers + Prisma 7 + SQLite. Нет авторизации, тестов 
 | Format       | `pnpm format`                                                         |
 | Format check | `pnpm format:check`                                                   |
 | Unused code  | `pnpm knip`                                                           |
-| Check        | `pnpm check` (lint + format + knip; same as CI)                       |
+| Test         | `pnpm test` (once) / `pnpm test:watch` / `pnpm test:coverage`         |
+| Check        | `pnpm check` (lint + format + knip + tests with coverage; same as CI) |
 | Build        | `pnpm build`                                                          |
 | Start        | `pnpm start`                                                          |
 | DB           | `pnpm db:setup` / `db:seed` / `db:reset` / `db:migrate` / `db:studio` |
@@ -44,6 +46,7 @@ Never commit `.env` or `prisma/data/*.db*`; the seed (`prisma/seed.ts`) is idemp
 - `src/features/` — one user action per folder (grid, selection, quick assign, custom shift, dnd, toolbar, save/publish)
 - `src/entities/` — `employee`, `shift-template`, `shift`, `schedule`: `model` (types, zod schemas, store, helpers), `api` (queries), `ui`
 - `src/server/` — Prisma client, repositories, HTTP helpers. **The only place that touches the DB**; files import `server-only`
+- `tests/` — shared test helpers (`fixtures`, `fetch` stub, `render`, `viewport`, `db`), setup and stubs. Test files live next to the code as `*.test.ts(x)`
 
 ## Conventions
 
@@ -61,6 +64,25 @@ Never commit `.env` or `prisma/data/*.db*`; the seed (`prisma/seed.ts`) is idemp
 - Breakpoints are `sm` 320, `md` 640, `lg` 1200 (defaults are disabled). Mobile-first: unprefixed styles apply everywhere, so `sm:` means "from 320", not "tablet". Use `md:` / `lg:` to widen. The JS side is `useBreakpoint` in `src/shared/lib/use-breakpoint.ts`: keep it in sync with `globals.css`
 - oxfmt rewrites arbitrary Tailwind values into canonical utilities (`w-[335px]` became `w-84`, which is 336 px). After formatting, check pixel-exact sizes against the design
 - The overview page (`/`) is data-driven from `src/widgets/project-overview/model/content.ts`. When a feature is added, removed or its status changes, update that file and the README
+
+## Testing
+
+Vitest runs three projects (`vitest.config.mts`):
+
+- `unit` (node): `src/**/*.test.ts` outside `src/server` and `src/app/api`: pure logic, zod schemas, the Zustand store, overview content
+- `server` (node): `src/server/**`, `src/app/api/**`, `prisma/**`. `tests/setup/db.ts` builds a fresh temp SQLite DB per test file from the real `prisma/migrations` and sets `DATABASE_URL` first. Repositories and Route Handlers run against it, no DB mocks. Never point tests at `prisma/data/dev.db`
+- `dom` (jsdom): `src/**/*.test.tsx`: components, hooks, pages. `vitest.setup.ts` stubs `ResizeObserver` and `matchMedia`
+
+Rules of thumb:
+
+- New behavior ships with a test next to it. Coverage thresholds live in `vitest.config.mts` and are enforced by `pnpm test:coverage` (CI)
+- Mock only boundaries: `fetch` (`stubFetch`), `sonner`, `next/navigation`, server repositories in page tests. Do not mock our own components or stores
+- jsdom has no layout: grid tests need `stubLayoutSize` (TanStack Virtual reads `clientHeight`), breakpoint tests use `setViewportWidth`
+- `user-event` does not carry Ctrl/Shift into pointer events. Use `fireEvent.pointerDown(el, { ctrlKey: true })`
+- dnd-kit internals are not tested; `shift-dnd-provider.test.tsx` swaps `DndContext` for a spy and calls our handlers. Drop logic is the pure `resolveDrop` in `entities/shift/model/dnd.ts`
+- `project-overview/model/content.test.ts` checks tech versions on the overview page against `package.json`. After bumping a dependency, update `content.ts`
+- Vitest globals are off (`types: []` in tsconfig): import `describe`, `it`, `expect`, `vi` from `vitest`
+- Not covered: browser E2E. Add Playwright only together with a `package.json` entry
 
 ## Known state
 

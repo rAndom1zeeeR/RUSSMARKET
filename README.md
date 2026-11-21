@@ -32,15 +32,17 @@ pnpm dev                 # http://localhost:3000
 
 ## Скрипты
 
-| Команда                                 | Что делает                                 |
-| --------------------------------------- | ------------------------------------------ |
-| `pnpm dev` / `build` / `start`          | разработка / production-сборка / запуск    |
-| `pnpm db:setup`                         | generate + migrate deploy + seed           |
-| `pnpm db:migrate` / `db:reset`          | новая миграция / сброс БД и seed           |
-| `pnpm db:seed` / `db:studio`            | пересоздать данные / Prisma Studio         |
-| `pnpm lint:check` / `pnpm format:check` | oxlint / oxfmt                             |
-| `pnpm knip`                             | неиспользуемый код                         |
-| `pnpm check`                            | lint + format + knip, то же, что гоняет CI |
+| Команда                                 | Что делает                                         |
+| --------------------------------------- | -------------------------------------------------- |
+| `pnpm dev` / `build` / `start`          | разработка / production-сборка / запуск            |
+| `pnpm db:setup`                         | generate + migrate deploy + seed                   |
+| `pnpm db:migrate` / `db:reset`          | новая миграция / сброс БД и seed                   |
+| `pnpm db:seed` / `db:studio`            | пересоздать данные / Prisma Studio                 |
+| `pnpm lint:check` / `pnpm format:check` | oxlint / oxfmt                                     |
+| `pnpm knip`                             | неиспользуемый код                                 |
+| `pnpm test` / `test:watch`              | тесты Vitest: один прогон / режим наблюдения       |
+| `pnpm test:coverage`                    | тесты с отчётом и порогом покрытия                 |
+| `pnpm check`                            | lint + format + knip + тесты, то же, что гоняет CI |
 
 CI — [`.github/workflows/ci.yml`](.github/workflows/ci.yml): на push и pull request в `master` ставятся Node 22 и pnpm 12.5.1, затем `pnpm check`. Деплоя нет.
 
@@ -68,6 +70,20 @@ CI — [`.github/workflows/ci.yml`](.github/workflows/ci.yml): на push и pull
 
 Размеры сетки, которые нужны в JS (виртуализация), берутся из `useBreakpoint` (`src/shared/lib/use-breakpoint.ts`) —
 значения должны совпадать с `globals.css`.
+
+## Тесты
+
+Vitest + Testing Library, три проекта (`vitest.config.mts`):
+
+| Проект   | Среда | Что проверяет                                                                                                     |
+| -------- | ----- | ----------------------------------------------------------------------------------------------------------------- |
+| `unit`   | node  | даты, время, склонения, модели, zod-схемы, хранилище Zustand, логика сброса при перетаскивании, контент главной   |
+| `server` | node  | репозитории и Route Handlers на настоящей временной SQLite (схема из `prisma/migrations`), идемпотентность сидера |
+| `dom`    | jsdom | компоненты, хуки, страницы; сценарии «выделить → шаблон → сохранить» целиком через `SchedulePage`                 |
+
+`pnpm test:coverage` печатает отчёт и падает ниже порога (сейчас около 99% строк); CI гоняет его на каждый push и PR.
+Серверные тесты создают свою базу во временном каталоге и не трогают `prisma/data/dev.db`.
+Браузерных E2E-тестов нет; механика drag-and-drop внутри dnd-kit в тестах подменена, проверяются наши обработчики.
 
 ## Дизайн
 
