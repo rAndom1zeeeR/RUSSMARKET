@@ -48,6 +48,7 @@ export const GridCell = memo(function GridCell({
 }: GridCellProps) {
   const key = cellKey(employeeId, date);
   const { setNodeRef: setDropRef, isOver } = useDroppable({ id: key });
+  // Drag node is the chip: DragOverlay copies that rect, so cell padding is not part of the preview.
   const {
     setNodeRef: setDragRef,
     listeners,
@@ -55,14 +56,9 @@ export const GridCell = memo(function GridCell({
     isDragging,
   } = useDraggable({ id: `shift:${key}`, data: { kind: "shift", key, value }, disabled: !value });
 
-  const setRefs = (node: HTMLDivElement | null) => {
-    setDropRef(node);
-    setDragRef(node);
-  };
-
   return (
     <div
-      ref={setRefs}
+      ref={setDropRef}
       {...(value ? attributes : {})}
       {...(value ? listeners : {})}
       role="gridcell"
@@ -93,13 +89,15 @@ export const GridCell = memo(function GridCell({
         )}
       >
         {value ? (
-          <ShiftChip
-            start={value.start}
-            end={value.end}
-            tone={tone}
-            view={view}
-            className={cn(selected && "ring-cell-selected-line ring-2")}
-          />
+          <div ref={setDragRef} className="size-full">
+            <ShiftChip
+              start={value.start}
+              end={value.end}
+              tone={tone}
+              view={view}
+              className={cn(selected && "ring-cell-selected-line ring-2")}
+            />
+          </div>
         ) : (
           selected && (
             <div className="flex size-full items-center justify-center">

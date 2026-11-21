@@ -83,7 +83,7 @@ function ScheduleWorkspace({ scheduleId, anchor }: { scheduleId: string; anchor:
   return (
     <>
       <ShiftDndProvider view={view} templates={templates}>
-        <div className="flex shrink-0 flex-col gap-2 lg:max-h-186 lg:min-h-0 lg:flex-1 lg:shrink lg:flex-row">
+        <div className="flex shrink-0 flex-col gap-2 lg:max-h-192 lg:min-h-0 lg:flex-1 lg:shrink lg:flex-row">
           <section className="bg-surface flex min-w-0 shrink-0 flex-col gap-3 rounded-2xl p-2 md:rounded-[20px] md:p-3 lg:h-auto lg:min-h-0 lg:flex-1 lg:shrink lg:gap-5">
             <div className="relative shrink-0">
               <div className={cn(hasSelection && "lg:invisible")}>

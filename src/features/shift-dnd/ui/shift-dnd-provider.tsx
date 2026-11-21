@@ -74,19 +74,18 @@ export function ShiftDndProvider({ children, view, templates }: ShiftDndProvider
       {children}
       <DragOverlay dropAnimation={null}>
         {active?.kind === "template" && (
-          <div className="w-75 cursor-grabbing shadow-lg">
-            <TemplateCard template={active.template} usage={0} />
+          <div className="size-full cursor-grabbing shadow-lg">
+            <TemplateCard template={active.template} usage={0} className="h-full" />
           </div>
         )}
         {active?.kind === "shift" && (
-          <div className="h-16 w-24 cursor-grabbing opacity-90 shadow-lg">
-            <ShiftChip
-              start={active.value.start}
-              end={active.value.end}
-              tone={active.value.templateId ? (toneByTemplate.get(active.value.templateId) ?? "custom") : "custom"}
-              view={view}
-            />
-          </div>
+          <ShiftChip
+            start={active.value.start}
+            end={active.value.end}
+            tone={active.value.templateId ? (toneByTemplate.get(active.value.templateId) ?? "custom") : "custom"}
+            view={view}
+            className="cursor-grabbing opacity-90 shadow-lg"
+          />
         )}
       </DragOverlay>
     </DndContext>

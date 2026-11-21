@@ -141,15 +141,21 @@ describe("ShiftDndProvider: оверлей под курсором", () => {
     expect(screen.getByTestId("overlay")).toBeEmptyDOMElement();
   });
 
-  it("при перетаскивании шаблона показывает его карточку", () => {
+  it("при перетаскивании шаблона показывает его карточку в размер источника", () => {
     act(() => context().onDragStart?.(startEvent(templateData())));
-    expect(screen.getByTestId("overlay")).toHaveTextContent("Утро");
-    expect(screen.getByTestId("overlay")).toHaveTextContent("07:00 - 15:00");
+    const overlay = screen.getByTestId("overlay");
+    expect(overlay).toHaveTextContent("Утро");
+    expect(overlay).toHaveTextContent("07:00 - 15:00");
+    expect(overlay.firstElementChild?.className).toContain("size-full");
+    expect(overlay.querySelector(".w-75")).toBeNull();
   });
 
-  it("при перетаскивании смены показывает чип со временем", () => {
+  it("при перетаскивании смены показывает чип в размер блока, без фиксированных h-16/w-24", () => {
     act(() => context().onDragStart?.(startEvent(shiftData())));
-    expect(screen.getByTestId("overlay")).toHaveTextContent("10 - 18");
+    const overlay = screen.getByTestId("overlay");
+    expect(overlay).toHaveTextContent("10 - 18");
+    expect(overlay.firstElementChild?.className).toContain("size-full");
+    expect(overlay.querySelector(".h-16, .w-24")).toBeNull();
   });
 
   it("оверлей исчезает после сброса и после отмены", () => {
