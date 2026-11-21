@@ -62,6 +62,35 @@ function StatusIcon({ status }: { status: RequirementStatus }) {
   );
 }
 
+interface DatabaseConnection {
+  provider: "sqlite" | "postgres";
+  connected: boolean;
+}
+
+const PROVIDER_LABEL = {
+  sqlite: "Локальная SQLite",
+  postgres: "Postgres",
+} as const;
+
+function ConnectionBadge({ connection }: { connection: DatabaseConnection }) {
+  const state = connection.connected ? "подключено" : "нет связи";
+  return (
+    <p
+      role="status"
+      className={cn(
+        "inline-flex w-fit items-center gap-2 rounded-full px-3 py-1 text-sm leading-5",
+        connection.connected ? "bg-shift-teal-bg text-shift-teal-fg" : "bg-danger-soft text-danger"
+      )}
+    >
+      <span
+        aria-hidden
+        className={cn("size-2 rounded-full", connection.connected ? "bg-shift-teal-fg" : "bg-danger")}
+      />
+      {PROVIDER_LABEL[connection.provider]} · {state}
+    </p>
+  );
+}
+
 function Stat({ value, label, hint }: { value: string; label: string; hint?: string }) {
   return (
     <div className={cn(CARD, "flex flex-col gap-1 p-4 md:p-6")}>
@@ -72,8 +101,12 @@ function Stat({ value, label, hint }: { value: string; label: string; hint?: str
   );
 }
 
+interface ProjectOverviewProps {
+  connection: DatabaseConnection;
+}
+
 /** Главная: что сделано, какие требования ТЗ закрыты, что добавлено сверх ТЗ, стек и ограничения. */
-export function ProjectOverview() {
+export function ProjectOverview({ connection }: ProjectOverviewProps) {
   const done = countByStatus("done");
   const partial = countByStatus("partial");
   const total = done + partial;
@@ -83,7 +116,10 @@ export function ProjectOverview() {
   return (
     <div className="mx-auto flex w-full max-w-[1360px] flex-col gap-8 lg:gap-10">
       <section className={cn(CARD, "flex flex-col gap-4 md:p-8")}>
-        <p className="text-muted-foreground text-sm">Тестовое задание · Fullstack-разработчик</p>
+        <div className="flex flex-wrap items-center gap-3">
+          <p className="text-muted-foreground text-sm">Тестовое задание · Fullstack-разработчик</p>
+          <ConnectionBadge connection={connection} />
+        </div>
         <h1 className="text-3xl leading-tight font-medium tracking-[-1px] md:text-[40px]">График смен</h1>
         <p className="max-w-3xl text-base leading-6">
           Функциональный интерфейс по макетам Figma: просмотр расписания, назначение и редактирование смен, шаблоны,
