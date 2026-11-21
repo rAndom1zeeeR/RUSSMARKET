@@ -18,14 +18,14 @@ function EmployeeAvatar({ employee }: { employee: EmployeeDTO }) {
         alt=""
         width={40}
         height={40}
-        className="size-10 shrink-0 rounded-md object-cover"
+        className="size-8 shrink-0 rounded-md object-cover md:size-10"
       />
     );
   }
   return (
     <span
       aria-hidden
-      className="from-brand flex size-10 shrink-0 items-center justify-center rounded-md bg-linear-to-b to-[#7da2ff] text-sm font-medium text-white"
+      className="from-brand flex size-8 shrink-0 items-center justify-center rounded-md bg-linear-to-b to-[#7da2ff] text-xs font-medium text-white md:size-10 md:text-sm"
     >
       {initials(employee.fullName)}
     </span>
@@ -35,11 +35,11 @@ function EmployeeAvatar({ employee }: { employee: EmployeeDTO }) {
 /** Ячейка сотрудника: аватар, ФИО, «роль · N ч». */
 export function EmployeeCell({ employee }: { employee: EmployeeDTO }) {
   return (
-    <div className="flex min-w-0 items-center gap-2">
+    <div className="flex min-w-0 items-center gap-1.5 md:gap-2">
       <EmployeeAvatar employee={employee} />
       <div className="min-w-0">
-        <div className="truncate text-base leading-6">{employee.fullName}</div>
-        <div className="text-muted-foreground text-xs leading-4">
+        <div className="text-xs leading-4 md:truncate md:text-base md:leading-6">{employee.fullName}</div>
+        <div className="text-muted-foreground hidden text-xs leading-4 md:block">
           {employee.role} · {employee.monthlyHours} ч
         </div>
       </div>

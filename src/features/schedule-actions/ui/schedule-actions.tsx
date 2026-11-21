@@ -30,18 +30,26 @@ export function ScheduleActions({ scheduleId }: { scheduleId: string }) {
   };
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex w-full items-center gap-1 md:w-auto">
       <Button
         tone="brand"
         variant="secondary"
         size="lg"
+        className="flex-1 md:flex-none"
         disabled={dirty || publish.isPending || schedule?.status === "published"}
         title={dirty ? "Сначала сохраните изменения" : undefined}
         onClick={() => publish.mutate()}
       >
         {schedule?.status === "published" ? "Опубликовано" : "Опубликовать"}
       </Button>
-      <Button tone="brand" variant="primary" size="lg" disabled={!dirty || save.isPending} onClick={handleSave}>
+      <Button
+        tone="brand"
+        variant="primary"
+        size="lg"
+        className="flex-1 md:flex-none"
+        disabled={!dirty || save.isPending}
+        onClick={handleSave}
+      >
         {save.isPending ? "Сохранение…" : "Сохранить"}
       </Button>
     </div>

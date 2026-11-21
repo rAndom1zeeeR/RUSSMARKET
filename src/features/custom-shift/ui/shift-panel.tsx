@@ -39,8 +39,8 @@ export function ShiftPanel({ templates, usage }: ShiftPanelProps) {
   };
 
   return (
-    <aside className="bg-surface flex w-84 shrink-0 flex-col gap-10 rounded-[20px] p-4">
-      <section aria-labelledby="templates-title">
+    <aside className="bg-surface flex w-full shrink-0 flex-col gap-6 rounded-2xl p-3 md:flex-row md:gap-8 md:rounded-[20px] md:p-4 lg:w-83.75 lg:flex-col lg:gap-10">
+      <section aria-labelledby="templates-title" className="md:flex-1 lg:flex-none">
         <h2 id="templates-title" className="mb-2 text-base leading-6 font-normal">
           Шаблоны смен
         </h2>
@@ -57,7 +57,7 @@ export function ShiftPanel({ templates, usage }: ShiftPanelProps) {
         </ul>
       </section>
 
-      <section aria-labelledby="custom-title">
+      <section aria-labelledby="custom-title" className="md:flex-1 lg:flex-none">
         <h2 id="custom-title" className="mb-2 text-base leading-6 font-normal">
           Своя смена
         </h2>

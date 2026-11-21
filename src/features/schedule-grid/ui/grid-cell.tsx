@@ -59,7 +59,7 @@ export function GridCell({
       onPointerEnter={() => onCellPointerEnter(employeeId, date)}
       className={cn(
         "relative min-w-0 select-none",
-        selected ? "p-0" : "p-1",
+        selected ? "p-0" : "p-0.5 md:p-1",
         value && "cursor-grab",
         isDragging && "opacity-40"
       )}

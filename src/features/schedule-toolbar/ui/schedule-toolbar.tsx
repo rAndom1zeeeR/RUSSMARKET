@@ -22,16 +22,22 @@ export function ScheduleToolbar({ title }: { title: string }) {
   const setSearch = useScheduleStore(state => state.setSearch);
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2">
       <SearchInput
         value={search}
         onValueChange={setSearch}
         placeholder="Поиск по ФИО"
         aria-label="Поиск по ФИО"
-        className="max-w-99.5 min-w-45 flex-1"
+        className="order-1 w-full md:w-auto md:min-w-45 md:flex-1 lg:max-w-99.5"
       />
-      <SegmentedControl<CalendarView> aria-label="Период" value={view} onValueChange={setView} options={VIEW_OPTIONS} />
-      <div className="ml-auto flex h-12 w-[256px] shrink-0 items-center justify-between">
+      <SegmentedControl<CalendarView>
+        aria-label="Период"
+        value={view}
+        onValueChange={setView}
+        options={VIEW_OPTIONS}
+        className="order-2 w-full md:order-3 lg:order-2 lg:w-75"
+      />
+      <div className="order-3 flex h-12 w-full shrink-0 items-center justify-between md:order-2 md:w-64 lg:order-3 lg:ml-auto">
         <Button
           variant="secondary"
           size="icon"

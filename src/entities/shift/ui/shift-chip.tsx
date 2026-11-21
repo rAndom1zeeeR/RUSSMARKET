@@ -27,11 +27,16 @@ export function ShiftChip({ start, end, tone, view, className }: ShiftChipProps)
     >
       {view === "week" ? (
         <>
-          <span className="text-base leading-6">{formatRange(start, end)}</span>
-          <span className={cn("text-xs leading-4", style.accent)}>{duration}</span>
+          <span className="text-xs leading-4 md:text-base md:leading-6">{formatRange(start, end)}</span>
+          <span className={cn("text-[10px] leading-3 md:text-xs md:leading-4", style.accent)}>{duration}</span>
         </>
       ) : (
-        <span className={cn("text-base leading-6 font-medium", tone === "custom" ? "text-white" : style.accent)}>
+        <span
+          className={cn(
+            "text-sm leading-5 font-medium md:text-base md:leading-6",
+            tone === "custom" ? "text-white" : style.accent
+          )}
+        >
           {duration}
         </span>
       )}

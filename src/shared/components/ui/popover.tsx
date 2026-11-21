@@ -20,7 +20,7 @@ export function PopoverContent({
         align={align}
         sideOffset={sideOffset}
         className={cn(
-          "bg-surface border-line z-50 w-64 rounded-xl border p-2 shadow-lg outline-none",
+          "bg-surface border-line z-50 w-64 max-w-[calc(100vw-16px)] rounded-xl border p-2 shadow-lg outline-none",
           "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
           className
         )}

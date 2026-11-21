@@ -6,19 +6,31 @@ import type { ShiftTone } from "@/entities/shift-template/model/styles";
 import type { ShiftTemplateDTO } from "@/entities/shift-template/model/types";
 import type { ShiftValue } from "@/entities/shift/model/types";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useEffect, useRef, type PointerEvent, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent, type ReactNode } from "react";
 import { EmployeeCell } from "@/entities/employee/ui/employee-cell";
 import { useScheduleStore } from "@/entities/schedule/model/store";
 import { cellKey, parseCellKey } from "@/entities/shift/model/cell";
 import { type CalendarView, type DateRange, dayOfMonth, weekdayShort } from "@/shared/lib/date";
+import { useBreakpoint, type Breakpoint } from "@/shared/lib/use-breakpoint";
 import { cn } from "@/shared/lib/utils";
 import { GridCell } from "./grid-cell";
 
-const EMPLOYEE_COLUMN = 220;
-const ROW_HEIGHT = 72;
 const COVERAGE_HEIGHT = 48;
 const HEADER_HEIGHT = { week: 48, month: 56 } as const;
-const DAY_MIN_WIDTH = { week: 88, month: 64 } as const;
+
+/** Размеры сетки по брейкпоинтам: lg — как в макете (220 / 72 / 88 / 64), на узких — компактнее. */
+const GRID_SIZES: Record<
+  Breakpoint,
+  { employeeColumn: number; rowHeight: number; dayMin: Record<CalendarView, number> }
+> = {
+  sm: { employeeColumn: 116, rowHeight: 64, dayMin: { week: 60, month: 44 } },
+  md: { employeeColumn: 180, rowHeight: 72, dayMin: { week: 76, month: 52 } },
+  lg: { employeeColumn: 220, rowHeight: 72, dayMin: { week: 88, month: 64 } },
+};
+
+/** lg, но карточка уже не вмещает недельную сетку из макета (≈ 1200–1500 px экрана) — берём компактнее. */
+const LG_COMPACT = { employeeColumn: 168, rowHeight: 72, dayMin: { week: 64, month: 52 } } as const;
+const LG_FULL_WIDTH = 836;
 
 interface ScheduleGridProps {
   view: CalendarView;
@@ -48,19 +60,46 @@ export function ScheduleGrid({
 
   const dragRef = useRef<{ anchor: string; base: ReadonlySet<string> } | null>(null);
 
+  const breakpoint = useBreakpoint();
+  // Ширина области сетки: по ней на lg выбираем полный или компактный вариант.
+  const [areaWidth, setAreaWidth] = useState(Number.POSITIVE_INFINITY);
+  const { employeeColumn, rowHeight, dayMin } =
+    breakpoint === "lg" && areaWidth < LG_FULL_WIDTH ? LG_COMPACT : GRID_SIZES[breakpoint];
+
+  // Горизонтальная прокрутка есть → полосы нужны; нет → прячем, чтобы сетка занимала всю ширину карточки.
+  const [scrollsX, setScrollsX] = useState(false);
+
   const rowVirtualizer = useVirtualizer({
     count: employees.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: () => ROW_HEIGHT,
+    estimateSize: () => rowHeight,
     overscan: 4,
   });
+
+  useEffect(() => {
+    rowVirtualizer.measure();
+  }, [rowHeight, rowVirtualizer]);
+
+  useLayoutEffect(() => {
+    const element = scrollRef.current;
+    if (!element) return undefined;
+    const update = () => {
+      setAreaWidth(element.getBoundingClientRect().width);
+      setScrollsX(element.scrollWidth > element.clientWidth + 1);
+    };
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(element);
+    if (element.firstElementChild) observer.observe(element.firstElementChild);
+    return () => observer.disconnect();
+  }, [view, range.days.length, employeeColumn, dayMin]);
 
   const employeeIndex = new Map(employees.map((employee, index) => [employee.id, index]));
   const dayIndex = new Map(range.days.map((day, index) => [day, index]));
   const toneByTemplate = new Map<string, ShiftTone>(templates.map(template => [template.id, template.color]));
 
-  const columns = `${EMPLOYEE_COLUMN}px repeat(${range.days.length}, minmax(${DAY_MIN_WIDTH[view]}px, 1fr))`;
-  const minWidth = EMPLOYEE_COLUMN + range.days.length * DAY_MIN_WIDTH[view];
+  const columns = `${employeeColumn}px repeat(${range.days.length}, minmax(${dayMin[view]}px, 1fr))`;
+  const minWidth = employeeColumn + range.days.length * dayMin[view];
 
   const rectKeys = (fromKey: string, toKey: string): string[] => {
     const { employeeId: fromEmployee, date: fromDate } = parseCellKey(fromKey);
@@ -86,6 +125,12 @@ export function ScheduleGrid({
     if (event.button !== 0) return;
     const key = cellKey(employeeId, date);
     const state = useScheduleStore.getState();
+
+    // Тач: тап добавляет/убирает ячейку (нет Ctrl и протяжки — они конфликтуют со скроллом).
+    if (event.pointerType === "touch") {
+      toggleCell(key);
+      return;
+    }
 
     if (event.shiftKey && state.selectionAnchor) {
       setSelection(rectKeys(state.selectionAnchor, key));
@@ -135,9 +180,8 @@ export function ScheduleGrid({
       aria-rowcount={employees.length}
       aria-colcount={range.days.length}
       className={cn(
-        "relative min-h-0 flex-1 overflow-auto",
-        // В неделе горизонтального скролла нет — вертикальную полосу прячем, чтобы сетка занимала ровно 993 px, как в макете.
-        view === "week" && "scrollbar-none [&::-webkit-scrollbar]:hidden"
+        "relative max-h-[70dvh] min-h-0 flex-none overflow-auto lg:max-h-none lg:flex-1",
+        !scrollsX && "scrollbar-none [&::-webkit-scrollbar]:hidden"
       )}
     >
       <div style={{ minWidth }}>
@@ -149,7 +193,7 @@ export function ScheduleGrid({
         >
           <div
             role="columnheader"
-            className="bg-surface text-muted-foreground sticky left-0 z-10 flex items-center px-3 text-base"
+            className="bg-surface text-muted-foreground sticky left-0 z-10 flex items-center px-2 text-sm md:px-3 md:text-base"
           >
             Сотрудник
           </div>
@@ -158,12 +202,12 @@ export function ScheduleGrid({
               {renderDayHeader(
                 day,
                 view === "week" ? (
-                  <span className="text-muted-foreground text-base">
+                  <span className="text-muted-foreground text-sm md:text-base">
                     {weekdayShort(day)} {dayOfMonth(day)}
                   </span>
                 ) : (
-                  <span className="flex flex-col items-center text-base leading-5">
-                    <span className="text-muted-foreground text-sm">{weekdayShort(day)}</span>
+                  <span className="flex flex-col items-center text-sm leading-5 md:text-base">
+                    <span className="text-muted-foreground text-xs md:text-sm">{weekdayShort(day)}</span>
                     <span>{dayOfMonth(day)}</span>
                   </span>
                 )
@@ -196,7 +240,7 @@ export function ScheduleGrid({
                   <div
                     role="rowheader"
                     className={cn(
-                      "sticky left-0 z-10 flex items-center px-2",
+                      "sticky left-0 z-10 flex items-center px-1.5 md:px-2",
                       striped ? "bg-surface-alt" : "bg-surface"
                     )}
                   >
@@ -232,7 +276,7 @@ export function ScheduleGrid({
           className="bg-surface sticky bottom-0 z-20 grid"
           style={{ gridTemplateColumns: columns, height: COVERAGE_HEIGHT }}
         >
-          <div className="bg-surface text-muted-foreground sticky left-0 z-10 flex items-center px-3 text-base">
+          <div className="bg-surface text-muted-foreground sticky left-0 z-10 flex items-center px-2 text-sm md:px-3 md:text-base">
             Покрытие
           </div>
           {range.days.map(day => {
@@ -243,7 +287,7 @@ export function ScheduleGrid({
                 role="gridcell"
                 aria-label={`Покрытие ${day}: ${count}`}
                 className={cn(
-                  "flex items-center justify-center text-base transition-colors",
+                  "flex items-center justify-center text-sm transition-colors md:text-base",
                   count > 0 ? "bg-brand-soft text-brand-ink" : "bg-danger-soft text-danger"
                 )}
               >

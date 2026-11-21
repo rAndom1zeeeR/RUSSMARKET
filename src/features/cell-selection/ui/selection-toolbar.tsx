@@ -20,7 +20,7 @@ interface SelectionToolbarProps {
 }
 
 const ghostButton =
-  "bg-transparent text-white hover:bg-white/10 active:bg-white/20 disabled:bg-transparent disabled:text-white/40";
+  "bg-transparent px-2.5 text-white hover:bg-white/10 active:bg-white/20 disabled:bg-transparent disabled:text-white/40 md:px-3";
 
 /** Тёмная панель над сеткой: сводка по выделению и действия над ним. */
 export function SelectionToolbar({ shifts, templates }: SelectionToolbarProps) {
@@ -43,21 +43,21 @@ export function SelectionToolbar({ shifts, templates }: SelectionToolbarProps) {
     <div
       role="toolbar"
       aria-label="Действия с выделенными ячейками"
-      className="bg-ink-bar flex h-13 items-center gap-3 rounded-lg px-3 text-sm text-white"
+      className="bg-ink-bar flex h-13 items-center gap-2 rounded-lg px-2 text-sm text-white md:gap-3 md:px-3"
     >
-      <span>Выделено:</span>
+      <span className="hidden md:inline">Выделено:</span>
       <Badge tone="onDark">
         {keys.length} {plural(keys.length, ["ячейка", "ячейки", "ячеек"])}
       </Badge>
-      <span className="text-white/90">
+      <span className="hidden text-white/90 lg:inline">
         {employees.size} сотрудника(-ов) · {days.size} дн.
       </span>
 
       <div className="ml-auto flex items-center gap-1">
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="quaternary" size="sm" className={ghostButton}>
-              <LayoutTemplate /> Применить шаблон
+            <Button variant="quaternary" size="sm" className={ghostButton} aria-label="Применить шаблон">
+              <LayoutTemplate /> <span className="hidden md:inline">Применить шаблон</span>
             </Button>
           </PopoverTrigger>
           <PopoverContent align="end" className="text-foreground w-64">
@@ -101,11 +101,18 @@ export function SelectionToolbar({ shifts, templates }: SelectionToolbarProps) {
             setCells(filledKeys, null);
           }}
           disabled={filledKeys.length === 0}
+          aria-label="Очистить"
         >
-          <Trash2 /> Очистить
+          <Trash2 /> <span className="hidden md:inline">Очистить</span>
         </Button>
-        <Button variant="quaternary" size="sm" className={ghostButton} onClick={clearSelection}>
-          <X /> Снять
+        <Button
+          variant="quaternary"
+          size="sm"
+          className={ghostButton}
+          onClick={clearSelection}
+          aria-label="Снять выделение"
+        >
+          <X /> <span className="hidden md:inline">Снять</span>
         </Button>
       </div>
     </div>
@@ -126,8 +133,8 @@ function EditTimePopover({
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="quaternary" size="sm" className={ghostButton}>
-          <Pencil /> Изменить
+        <Button variant="quaternary" size="sm" className={ghostButton} aria-label="Изменить время">
+          <Pencil /> <span className="hidden md:inline">Изменить</span>
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" className="text-foreground w-72 p-3">

@@ -50,6 +50,14 @@
   --cell-selected-line: #a3b6f4;
 }
 
+/* Брейкпоинты: 320 / 640 / 1200 (mobile-first: без префикса — до 640). */
+@theme {
+  --breakpoint-*: initial;
+  --breakpoint-sm: 320px;
+  --breakpoint-md: 640px;
+  --breakpoint-lg: 1200px;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
