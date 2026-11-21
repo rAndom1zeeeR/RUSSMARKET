@@ -22,7 +22,7 @@ Route Handlers + Prisma 7 + SQLite. Нет авторизации; логика,
 | ------------ | ----------------------------------------------------------------------------------------- |
 | Install      | `pnpm install` (runs `prisma generate`)                                                   |
 | First run    | `cp .env.example .env`, then `pnpm db:setup`                                              |
-| Dev server   | `pnpm dev` (`PORT` from `.env`, default 3003)                                             |
+| Dev server   | `pnpm dev` (`PORT` from `.env`, default 3000)                                             |
 | Lint (fix)   | `pnpm lint`                                                                               |
 | Lint check   | `pnpm lint:check`                                                                         |
 | Format       | `pnpm format`                                                                             |

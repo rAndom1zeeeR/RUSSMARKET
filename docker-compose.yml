@@ -1,4 +1,4 @@
-# Dokploy: Compose, then Domains → service "app", container port = PORT from .env (default 3003).
+# Dokploy: Compose, then Domains → service "app", container port = PORT from .env (default 3000).
 # SQLite is the volume. One replica only — a second process corrupts the file.
 # Do not override DATABASE_URL with file:./prisma/data/dev.db: that path dies on redeploy.
 
@@ -15,11 +15,11 @@ services:
     environment:
       DATABASE_URL: file:/data/app.db
       NODE_ENV: ${NODE_ENV:-production}
-      PORT: ${PORT:-3003}
+      PORT: ${PORT:-3000}
     volumes:
       - app-data:/data
     expose:
-      - "${PORT:-3003}"
+      - "${PORT:-3000}"
     networks:
       - dokploy-network
     healthcheck:
@@ -28,7 +28,7 @@ services:
           "CMD",
           "node",
           "-e",
-          "fetch('http://127.0.0.1:'+(process.env.PORT||3003)).then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+          "fetch('http://127.0.0.1:'+(process.env.PORT||3000)).then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
         ]
       interval: 30s
       timeout: 5s

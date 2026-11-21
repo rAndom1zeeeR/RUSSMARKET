@@ -261,12 +261,6 @@
       }
     },
     {
-      "files": ["scripts/next-with-port.mjs"],
-      "rules": {
-        "unicorn/no-process-exit": "off"
-      }
-    },
-    {
       "files": ["src/features/schedule-grid/ui/schedule-grid.tsx"],
       "rules": {
         "react/incompatible-library": "off"

@@ -23,7 +23,7 @@ Next.js 16 · React 19 · TypeScript · Tailwind v4 · TanStack Query / Virtual 
 pnpm install
 cp .env.example .env     # DATABASE_URL="file:./prisma/data/dev.db"
 pnpm db:setup            # prisma generate + migrate deploy + seed
-pnpm dev                 # http://localhost:$PORT  (PORT из .env, иначе 3003)
+pnpm dev                 # http://localhost:$PORT  (PORT из .env, иначе 3000)
 ```
 
 Файл БД (`prisma/data/dev.db`) в git не хранится. Сидер (`prisma/seed.ts`) создаёт 8 сотрудников,
@@ -54,7 +54,7 @@ Production-сборка — Next.js standalone (`output: "standalone"` в `next.
 [`docker-compose.yml`](docker-compose.yml) написан под Dokploy, не под локальный `docker compose up`:
 
 1. В Dokploy — Compose из репозитория.
-2. Domains → сервис `app`, порт контейнера = `PORT` из `.env` (по умолчанию 3003).
+2. Domains → сервис `app`, порт контейнера = `PORT` из `.env` (по умолчанию 3000).
 
 SQLite — volume `app-data`, смонтированный в `/data`. В контейнере `DATABASE_URL=file:/data/app.db` (значение из `.env` compose перебивает). Реплика одна: второй процесс портит файл. Не подменяйте `DATABASE_URL` на `file:./prisma/data/dev.db` — этот путь пропадает при редеплое. Сеть `dokploy-network` внешняя.
 
