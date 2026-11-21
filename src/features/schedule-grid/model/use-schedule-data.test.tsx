@@ -1,9 +1,9 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
+import { callsTo, stubFetch } from "@tests/helpers/fetch";
+import { ANCHOR, EMPLOYEES, SCHEDULE_ID, SHIFTS, TEMPLATES } from "@tests/helpers/fixtures";
+import { createTestClient, createWrapper } from "@tests/helpers/render";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useScheduleStore } from "@/entities/schedule/model/store";
-import { callsTo, stubFetch } from "../../../../tests/helpers/fetch";
-import { ANCHOR, EMPLOYEES, SCHEDULE_ID, SHIFTS, TEMPLATES } from "../../../../tests/helpers/fixtures";
-import { createTestClient, createWrapper } from "../../../../tests/helpers/render";
 import { useScheduleData } from "./use-schedule-data";
 
 const state = () => useScheduleStore.getState();

@@ -1,5 +1,5 @@
+import { EMPLOYEES, resetDb } from "@tests/helpers/db";
 import { beforeEach, describe, expect, it } from "vitest";
-import { EMPLOYEES, resetDb } from "../../../tests/helpers/db";
 import { prisma } from "../db";
 import { listEmployees, listTemplates } from "./reference";
 

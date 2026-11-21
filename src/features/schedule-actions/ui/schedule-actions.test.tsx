@@ -1,11 +1,11 @@
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { callsTo, stubFetch } from "@tests/helpers/fetch";
+import { SCHEDULE, SCHEDULE_ID } from "@tests/helpers/fixtures";
+import { renderWithClient } from "@tests/helpers/render";
 import { toast } from "sonner";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useScheduleStore } from "@/entities/schedule/model/store";
-import { callsTo, stubFetch } from "../../../../tests/helpers/fetch";
-import { SCHEDULE, SCHEDULE_ID } from "../../../../tests/helpers/fixtures";
-import { renderWithClient } from "../../../../tests/helpers/render";
 import { ScheduleActions } from "./schedule-actions";
 
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn(), info: vi.fn() }, Toaster: () => null }));

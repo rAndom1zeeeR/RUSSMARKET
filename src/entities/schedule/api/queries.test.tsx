@@ -1,12 +1,12 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
+import { callsTo, stubFetch } from "@tests/helpers/fetch";
+import { SCHEDULE, SCHEDULE_ID } from "@tests/helpers/fixtures";
+import { EMPLOYEES, TEMPLATES } from "@tests/helpers/fixtures";
+import { createTestClient, createWrapper } from "@tests/helpers/render";
 import { toast } from "sonner";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { employeesQuery } from "@/entities/employee/api/queries";
 import { templatesQuery } from "@/entities/shift-template/api/queries";
-import { callsTo, stubFetch } from "../../../../tests/helpers/fetch";
-import { SCHEDULE, SCHEDULE_ID } from "../../../../tests/helpers/fixtures";
-import { EMPLOYEES, TEMPLATES } from "../../../../tests/helpers/fixtures";
-import { createTestClient, createWrapper } from "../../../../tests/helpers/render";
 import { scheduleQuery, usePublishSchedule } from "./queries";
 
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn(), info: vi.fn() }, Toaster: () => null }));

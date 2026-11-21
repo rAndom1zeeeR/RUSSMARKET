@@ -1,5 +1,5 @@
+import { resetDb, SCHEDULE_ID } from "@tests/helpers/db";
 import { beforeEach, describe, expect, it } from "vitest";
-import { resetDb, SCHEDULE_ID } from "../../../tests/helpers/db";
 import { GET as getEmployees } from "./employees/route";
 import { POST as publish } from "./schedules/[id]/publish/route";
 import { GET as getSchedule } from "./schedules/[id]/route";

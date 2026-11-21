@@ -1,8 +1,8 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { ANCHOR } from "@tests/helpers/fixtures";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useScheduleStore } from "@/entities/schedule/model/store";
-import { ANCHOR } from "../../../../tests/helpers/fixtures";
 import { ScheduleToolbar } from "./schedule-toolbar";
 
 const state = () => useScheduleStore.getState();

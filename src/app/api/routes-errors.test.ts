@@ -1,6 +1,6 @@
+import { resetDb, SCHEDULE_ID } from "@tests/helpers/db";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { prisma } from "@/server/db";
-import { resetDb, SCHEDULE_ID } from "../../../tests/helpers/db";
 import { GET as getEmployees } from "./employees/route";
 import { POST as publish } from "./schedules/[id]/publish/route";
 import { GET as getSchedule } from "./schedules/[id]/route";

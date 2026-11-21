@@ -1,9 +1,9 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { TEMPLATES } from "@tests/helpers/fixtures";
 import { toast } from "sonner";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useScheduleStore } from "@/entities/schedule/model/store";
-import { TEMPLATES } from "../../../../tests/helpers/fixtures";
 import { QuickAssignMenu } from "./quick-assign-menu";
 
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn(), info: vi.fn() }, Toaster: () => null }));

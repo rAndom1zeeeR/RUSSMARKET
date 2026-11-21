@@ -1,5 +1,5 @@
+import { resetDb, SCHEDULE_ID } from "@tests/helpers/db";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { resetDb, SCHEDULE_ID } from "../../../tests/helpers/db";
 import { prisma } from "../db";
 import { ConflictError } from "../errors";
 import { getFirstScheduleId, getSchedule, listShifts, publishSchedule, saveShifts } from "./schedules";

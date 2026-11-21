@@ -1,5 +1,5 @@
+import { callsTo, stubFetch } from "@tests/helpers/fetch";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { callsTo, stubFetch } from "../../../tests/helpers/fetch";
 import { api } from "./http";
 
 afterEach(() => {

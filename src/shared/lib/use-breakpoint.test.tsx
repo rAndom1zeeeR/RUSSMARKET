@@ -1,7 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
+import { setViewportWidth } from "@tests/helpers/viewport";
 import { renderToString } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { setViewportWidth } from "../../../tests/helpers/viewport";
 import { useBreakpoint } from "./use-breakpoint";
 
 describe("useBreakpoint", () => {

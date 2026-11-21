@@ -5,11 +5,13 @@ const root = fileURLToPath(new URL(".", import.meta.url));
 
 export default defineConfig({
   resolve: {
-    alias: {
-      "@": `${root}src`,
+    alias: [
+      // `@` is a prefix match, so `@tests` must come first or it resolves into `src/tests`.
+      { find: "@tests", replacement: `${root}tests` },
+      { find: "@", replacement: `${root}src` },
       // `server-only` бросает ошибку вне серверной сборки Next — в тестах это заглушка.
-      "server-only": `${root}tests/stubs/server-only.ts`,
-    },
+      { find: "server-only", replacement: `${root}tests/stubs/server-only.ts` },
+    ],
   },
   test: {
     projects: [

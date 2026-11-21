@@ -1,12 +1,12 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { callsTo, stubFetch } from "@tests/helpers/fetch";
+import { ANCHOR, EMPLOYEES, SCHEDULE, SHIFTS, TEMPLATES } from "@tests/helpers/fixtures";
+import { createTestClient, renderWithClient, stubLayoutSize } from "@tests/helpers/render";
 import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useScheduleStore } from "@/entities/schedule/model/store";
-import { callsTo, stubFetch } from "../../../../tests/helpers/fetch";
-import { ANCHOR, EMPLOYEES, SCHEDULE, SHIFTS, TEMPLATES } from "../../../../tests/helpers/fixtures";
-import { createTestClient, renderWithClient, stubLayoutSize } from "../../../../tests/helpers/render";
 import { SchedulePage } from "./schedule-page";
 
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn(), info: vi.fn() }, Toaster: () => null }));

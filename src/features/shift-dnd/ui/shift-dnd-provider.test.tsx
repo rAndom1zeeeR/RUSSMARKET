@@ -2,9 +2,9 @@ import type { DragData } from "@/entities/shift/model/dnd";
 import type { ReactNode } from "react";
 import { pointerWithin, type DndContextProps, type DragEndEvent, type DragStartEvent } from "@dnd-kit/core";
 import { act, render, screen } from "@testing-library/react";
+import { TEMPLATES } from "@tests/helpers/fixtures";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useScheduleStore } from "@/entities/schedule/model/store";
-import { TEMPLATES } from "../../../../tests/helpers/fixtures";
 import { ShiftDndProvider } from "./shift-dnd-provider";
 
 /**

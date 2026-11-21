@@ -33,7 +33,8 @@ async function counts() {
   return { employees, templates, schedules, shifts };
 }
 
-describe("сидер: предохранитель от затирания данных", () => {
+// Each case boots tsx in its own process. Two boots miss the default 5s timeout.
+describe("сидер: предохранитель от затирания данных", { timeout: 20_000 }, () => {
   it("на пустой базе работает и без --force", async () => {
     await prisma.shift.deleteMany();
     await prisma.schedule.deleteMany();
@@ -74,7 +75,7 @@ describe("сидер: предохранитель от затирания да�
   });
 });
 
-describe("сидер", () => {
+describe("сидер", { timeout: 20_000 }, () => {
   it("создаёт 8 сотрудников, 3 шаблона, график и смены текущей недели", async () => {
     const output = runSeed();
     expect(output).toContain("8 сотрудников");

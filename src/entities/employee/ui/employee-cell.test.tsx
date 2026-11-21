@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
+import { EMPLOYEES } from "@tests/helpers/fixtures";
 import { describe, expect, it } from "vitest";
-import { EMPLOYEES } from "../../../../tests/helpers/fixtures";
 import { EmployeeCell } from "./employee-cell";
 
 const [WITH_PHOTO, WITHOUT_PHOTO] = EMPLOYEES;

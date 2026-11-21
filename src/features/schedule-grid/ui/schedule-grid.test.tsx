@@ -2,14 +2,14 @@ import type { ShiftValue } from "@/entities/shift/model/types";
 import type { ComponentProps } from "react";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { ANCHOR, EMPLOYEES, SHIFTS, TEMPLATES } from "@tests/helpers/fixtures";
+import { stubLayoutSize } from "@tests/helpers/render";
+import { setViewportWidth } from "@tests/helpers/viewport";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useScheduleStore } from "@/entities/schedule/model/store";
 import { cellKey } from "@/entities/shift/model/cell";
 import { ShiftDndProvider } from "@/features/shift-dnd/ui/shift-dnd-provider";
 import { getRange } from "@/shared/lib/date";
-import { ANCHOR, EMPLOYEES, SHIFTS, TEMPLATES } from "../../../../tests/helpers/fixtures";
-import { stubLayoutSize } from "../../../../tests/helpers/render";
-import { setViewportWidth } from "../../../../tests/helpers/viewport";
 import { ScheduleGrid } from "./schedule-grid";
 
 const state = () => useScheduleStore.getState();

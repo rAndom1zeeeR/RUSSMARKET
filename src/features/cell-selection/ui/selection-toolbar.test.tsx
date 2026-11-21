@@ -1,9 +1,9 @@
 import type { ShiftValue } from "@/entities/shift/model/types";
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { TEMPLATES } from "@tests/helpers/fixtures";
 import { beforeEach, describe, expect, it } from "vitest";
 import { useScheduleStore } from "@/entities/schedule/model/store";
-import { TEMPLATES } from "../../../../tests/helpers/fixtures";
 import { SelectionToolbar } from "./selection-toolbar";
 
 const state = () => useScheduleStore.getState();

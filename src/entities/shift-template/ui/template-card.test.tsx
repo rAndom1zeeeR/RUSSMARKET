@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
+import { TEMPLATES } from "@tests/helpers/fixtures";
 import { describe, expect, it } from "vitest";
-import { TEMPLATES } from "../../../../tests/helpers/fixtures";
 import { TemplateCard } from "./template-card";
 
 const [MORNING, DAY, EVENING] = TEMPLATES;

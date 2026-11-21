@@ -49,7 +49,7 @@ The seed refuses to run when schedules already exist (exit code 1); `pnpm db:res
 - `src/server/` — Prisma client, repositories, HTTP helpers. **The only place that touches the DB**; files import `server-only`
 - `e2e/` — Playwright specs (`*.spec.ts`) and `support/` (DB prep and reseed, grid locators, mouse drag helper)
 - `docs/` — `ANALYSIS.md` (known problems with priorities and proposals), `PLAN.md` (original plan and decisions)
-- `tests/` — shared test helpers (`fixtures`, `fetch` stub, `render`, `viewport`, `db`), setup and stubs. Test files live next to the code as `*.test.ts(x)`
+- `tests/` — shared test helpers (`fixtures`, `fetch` stub, `render`, `viewport`, `db`), setup and stubs. Test files live next to the code as `*.test.ts(x)` and import helpers as `@tests/helpers/…` (`@tests/*` → `tests/*` in `tsconfig.json` and `vitest.config.mts`; `@` is a prefix alias, so `@tests` is listed first). Production code must not import `@tests` (oxlint)
 
 ## Conventions
 
