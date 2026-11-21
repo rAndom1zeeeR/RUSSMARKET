@@ -173,6 +173,10 @@ export const EXTRAS: readonly Extra[] = [
     title: "Уведомления и сворачиваемое меню",
     text: "Тосты об ошибках и успехе, боковое меню сворачивается до иконок.",
   },
+  {
+    title: "CI",
+    text: "GitHub Actions на push и pull request: oxlint, oxfmt --check и knip (`pnpm check`).",
+  },
 ];
 
 export const TECH_GROUPS: readonly TechGroup[] = [
@@ -217,6 +221,7 @@ export const TECH_GROUPS: readonly TechGroup[] = [
       { name: "oxlint", version: "1.94", purpose: "линт и границы слоёв FSD" },
       { name: "oxfmt", version: "0.79", purpose: "форматирование" },
       { name: "pnpm, tsx, knip", version: "—", purpose: "пакеты, запуск сидера, поиск неиспользуемого кода" },
+      { name: "GitHub Actions", version: "—", purpose: "CI: lint, format, knip на push и pull request" },
     ],
   },
 ];

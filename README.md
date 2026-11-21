@@ -32,14 +32,17 @@ pnpm dev                 # http://localhost:3000
 
 ## Скрипты
 
-| Команда                                 | Что делает                                                 |
-| --------------------------------------- | ---------------------------------------------------------- |
-| `pnpm dev` / `build` / `start`          | разработка / production-сборка / запуск                    |
-| `pnpm db:setup`                         | generate + migrate deploy + seed                           |
-| `pnpm db:migrate` / `db:reset`          | новая миграция / сброс БД и seed                           |
-| `pnpm db:seed` / `db:studio`            | пересоздать данные / Prisma Studio                         |
-| `pnpm lint:check` / `pnpm format:check` | oxlint / oxfmt                                             |
-| `pnpm knip`                             | неиспользуемый код (см. оговорку в [AGENTS.md](AGENTS.md)) |
+| Команда                                 | Что делает                                 |
+| --------------------------------------- | ------------------------------------------ |
+| `pnpm dev` / `build` / `start`          | разработка / production-сборка / запуск    |
+| `pnpm db:setup`                         | generate + migrate deploy + seed           |
+| `pnpm db:migrate` / `db:reset`          | новая миграция / сброс БД и seed           |
+| `pnpm db:seed` / `db:studio`            | пересоздать данные / Prisma Studio         |
+| `pnpm lint:check` / `pnpm format:check` | oxlint / oxfmt                             |
+| `pnpm knip`                             | неиспользуемый код                         |
+| `pnpm check`                            | lint + format + knip, то же, что гоняет CI |
+
+CI — [`.github/workflows/ci.yml`](.github/workflows/ci.yml): на push и pull request в `master` ставятся Node 22 и pnpm 12.5.1, затем `pnpm check`. Деплоя нет.
 
 ## Возможности
 

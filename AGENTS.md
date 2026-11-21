@@ -27,6 +27,7 @@ Route Handlers + Prisma 7 + SQLite. Нет авторизации, тестов 
 | Format       | `pnpm format`                                                         |
 | Format check | `pnpm format:check`                                                   |
 | Unused code  | `pnpm knip`                                                           |
+| Check        | `pnpm check` (lint + format + knip; same as CI)                       |
 | Build        | `pnpm build`                                                          |
 | Start        | `pnpm start`                                                          |
 | DB           | `pnpm db:setup` / `db:seed` / `db:reset` / `db:migrate` / `db:studio` |
@@ -63,4 +64,4 @@ Never commit `.env` or `prisma/data/*.db*`; the seed (`prisma/seed.ts`) is idemp
 
 ## Known state
 
-`pnpm knip` currently fails on four unused packages: `@prisma/client` (the generated client is imported instead), `next-themes`, `react-hook-form` and `tailwindcss-animate` (starter kit leftovers, not imported yet). That is not dead code. Do not delete it just to make knip pass unless asked. Any other knip finding is real: fix it.
+`pnpm knip` should pass. `@prisma/client` is in `package.json` → `knip.ignoreDependencies`: `src/generated` is gitignored, so knip cannot see that the generated client imports `@prisma/client/runtime/client`. Do not remove the package. Any other knip finding is real: fix it.
