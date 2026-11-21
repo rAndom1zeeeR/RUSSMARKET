@@ -104,10 +104,10 @@ describe("ProjectOverview: раздел про базу данных", () => {
     expect(steps).toHaveLength(4);
   });
 
-  it("предупреждает, что Postgres на живой базе не прогонялся, и про сидер", () => {
+  it("говорит, что локально SQLite, и предупреждает про сидер", () => {
     render(<ProjectOverview />);
-    expect(screen.getAllByText(/на живой базе не прогонялся/).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/Сидер удаляет данные/).length).toBeGreaterThan(0);
+    expect(screen.getByText(/Локально Docker не нужен/)).toBeInTheDocument();
+    expect(screen.getByText(/Сидер удаляет данные/)).toBeInTheDocument();
   });
 });
 

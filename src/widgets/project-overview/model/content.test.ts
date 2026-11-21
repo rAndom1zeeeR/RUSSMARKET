@@ -106,8 +106,9 @@ describe("раздел про базу данных", () => {
     }
   });
 
-  it("честно оговаривает, что Postgres-путь не прогонялся на живой базе, и предупреждает про сидер", () => {
-    expect(DATABASE.caveat).toContain("не прогонялся");
+  it("говорит, что локально SQLite, Postgres проверяет CI, и предупреждает про сидер", () => {
+    expect(DATABASE.caveat).toContain("SQLite");
+    expect(DATABASE.caveat).toContain("postgres");
     expect(DATABASE.caveat).toContain("Сидер удаляет данные");
   });
 
