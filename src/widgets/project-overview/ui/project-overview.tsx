@@ -3,6 +3,7 @@ import Link from "next/link";
 import { cn } from "@/shared/lib/utils";
 import {
   ARCHITECTURE,
+  DATABASE,
   EXTRAS,
   LAYERS_NOTE,
   LIMITATIONS,
@@ -12,6 +13,19 @@ import {
 } from "../model/content";
 
 const CARD = "bg-surface rounded-2xl p-5 md:rounded-[20px] md:p-6";
+
+/** Текст с `кодом` в обратных апострофах: нечётные фрагменты выводятся как <code>. */
+function RichText({ children }: { children: string }) {
+  return children.split("`").map((part, index) =>
+    index % 2 === 1 ? (
+      <code key={part} className="bg-muted rounded px-1 py-0.5 text-[0.9em]">
+        {part}
+      </code>
+    ) : (
+      part
+    )
+  );
+}
 
 function countByStatus(status: RequirementStatus): number {
   return REQUIREMENT_GROUPS.reduce((sum, group) => sum + group.items.filter(item => item.status === status).length, 0);
@@ -23,7 +37,11 @@ function SectionTitle({ id, children, hint }: { id: string; children: string; hi
       <h2 id={id} className="text-xl leading-6 font-semibold tracking-[-0.3px]">
         {children}
       </h2>
-      {hint && <p className="text-muted-foreground text-sm">{hint}</p>}
+      {hint && (
+        <p className="text-muted-foreground text-sm">
+          <RichText>{hint}</RichText>
+        </p>
+      )}
     </div>
   );
 }
@@ -110,8 +128,14 @@ export function ProjectOverview() {
                   <li key={item.title} className="flex gap-3">
                     <StatusIcon status={item.status} />
                     <div className="min-w-0">
-                      <p className="text-base leading-6">{item.title}</p>
-                      {item.note && <p className="text-muted-foreground text-sm leading-5">{item.note}</p>}
+                      <p className="text-base leading-6">
+                        <RichText>{item.title}</RichText>
+                      </p>
+                      {item.note && (
+                        <p className="text-muted-foreground text-sm leading-5">
+                          <RichText>{item.note}</RichText>
+                        </p>
+                      )}
                     </div>
                   </li>
                 ))}
@@ -129,7 +153,9 @@ export function ProjectOverview() {
           {EXTRAS.map(extra => (
             <li key={extra.title} className={cn(CARD, "flex flex-col gap-1")}>
               <h3 className="text-base leading-6 font-semibold">{extra.title}</h3>
-              <p className="text-muted-foreground text-sm leading-5">{extra.text}</p>
+              <p className="text-muted-foreground text-sm leading-5">
+                <RichText>{extra.text}</RichText>
+              </p>
             </li>
           ))}
         </ul>
@@ -150,7 +176,9 @@ export function ProjectOverview() {
                       <span className="font-medium">{item.name}</span>
                       <span className="text-muted-foreground text-xs">{item.version}</span>
                     </dt>
-                    <dd className="text-muted-foreground text-sm leading-5">{item.purpose}</dd>
+                    <dd className="text-muted-foreground text-sm leading-5">
+                      <RichText>{item.purpose}</RichText>
+                    </dd>
                   </div>
                 ))}
               </dl>
@@ -170,10 +198,59 @@ export function ProjectOverview() {
                 {index + 1}
               </span>
               <h3 className="text-base leading-6 font-semibold">{step.title}</h3>
-              <p className="text-muted-foreground text-sm leading-5">{step.text}</p>
+              <p className="text-muted-foreground text-sm leading-5">
+                <RichText>{step.text}</RichText>
+              </p>
             </li>
           ))}
         </ol>
+      </section>
+
+      <section aria-labelledby="database-title" className="flex flex-col gap-4">
+        <SectionTitle
+          id="database-title"
+          hint="Локальная база — осознанное решение для этого задания, а не упрощение «на потом»."
+        >
+          База данных: SQLite сейчас, переезд на Postgres — несколько правок
+        </SectionTitle>
+        <div className="grid gap-2 lg:grid-cols-3">
+          <article className={CARD}>
+            <h3 className="mb-3 text-base leading-6 font-semibold">Почему локальная SQLite</h3>
+            <ul className="flex flex-col gap-3">
+              {DATABASE.reasons.map(item => (
+                <li key={item} className="text-base leading-6">
+                  <RichText>{item}</RichText>
+                </li>
+              ))}
+            </ul>
+          </article>
+          <article className={CARD}>
+            <h3 className="mb-3 text-base leading-6 font-semibold">Почему всё готово к Postgres</h3>
+            <ul className="flex flex-col gap-3">
+              {DATABASE.readiness.map(item => (
+                <li key={item} className="flex gap-3 text-base leading-6">
+                  <StatusIcon status="done" />
+                  <span>
+                    <RichText>{item}</RichText>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </article>
+          <article className={CARD}>
+            <h3 className="mb-3 text-base leading-6 font-semibold">Как мигрировать</h3>
+            <ol className="flex list-decimal flex-col gap-3 pl-5 text-base leading-6">
+              {DATABASE.steps.map(item => (
+                <li key={item}>
+                  <RichText>{item}</RichText>
+                </li>
+              ))}
+            </ol>
+            <p className="text-muted-foreground mt-4 text-sm leading-5">
+              <RichText>{DATABASE.caveat}</RichText>
+            </p>
+          </article>
+        </div>
       </section>
 
       <section aria-labelledby="limits-title" className="flex flex-col gap-4">
@@ -184,7 +261,7 @@ export function ProjectOverview() {
           {LIMITATIONS.map(item => (
             <li key={item} className="flex gap-3 text-base leading-6">
               <Minus className="text-muted-foreground mt-1 size-4 shrink-0" aria-hidden />
-              {item}
+              <RichText>{item}</RichText>
             </li>
           ))}
         </ul>

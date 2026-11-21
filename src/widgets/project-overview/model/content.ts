@@ -188,7 +188,7 @@ export const TECH_GROUPS: readonly TechGroup[] = [
     title: "Данные и сервер",
     items: [
       { name: "Prisma", version: "7.10", purpose: "ORM, миграции, сидер" },
-      { name: "SQLite", version: "better-sqlite3 12", purpose: "файл БД внутри проекта" },
+      { name: "SQLite", version: "better-sqlite3 12", purpose: "локальная БД — осознанный выбор, см. раздел ниже" },
       { name: "zod", version: "4.6", purpose: "валидация запросов и общих DTO" },
     ],
   },
@@ -228,6 +228,29 @@ export const ARCHITECTURE: readonly ArchitectureStep[] = [
   { title: "Prisma", text: "Репозитории в `src/server`, транзакция на сохранение" },
   { title: "SQLite", text: "Файл `prisma/data/dev.db`, не в git; данные даёт сидер" },
 ];
+
+export const DATABASE = {
+  reasons: [
+    "Проверяющему не нужен сервер БД: после `pnpm db:setup` проект сразу работает с данными.",
+    "Файл БД лежит в проекте, но не в git; сидер воспроизводит данные одной командой.",
+    "Задача — один график одной компании: отдельный сервер БД дал бы сложность без выгоды.",
+  ],
+  readiness: [
+    "Весь доступ к данным идёт через Prisma: сырого SQL и типов, специфичных для SQLite, в коде нет.",
+    "БД трогает только `src/server`: репозитории скрывают детали от Route Handlers и интерфейса.",
+    "Адрес БД — переменная `DATABASE_URL`; от SQLite зависят лишь провайдер в схеме и адаптер в двух файлах.",
+    "Целостность держит схема, а не SQLite: уникальный ключ (график, сотрудник, дата), индексы и каскады переносятся как есть.",
+    "Сохранение уже выполняется одной транзакцией — та же модель работает на Postgres.",
+  ],
+  steps: [
+    'В `prisma/schema.prisma` заменить `provider = "sqlite"` на `"postgresql"`.',
+    "Поставить `@prisma/adapter-pg` и `pg`, заменить адаптер в `src/server/db.ts` и `prisma/seed.ts`.",
+    'Указать `DATABASE_URL="postgresql://…"`.',
+    "Удалить `prisma/migrations` (они на диалекте SQLite), выполнить `prisma migrate dev --name init` и `pnpm db:seed`.",
+  ],
+  caveat:
+    "Миграция описана, но на Postgres не запускалась. Даты и время хранятся строками (`YYYY-MM-DD`, `HH:mm`) ради простоты; в Postgres их можно перевести в `Date` / `Time`.",
+} as const;
 
 export const LAYERS_NOTE =
   "Код разложен по слоям shared → entities → features → widgets → app, границы между ними проверяет линтер.";

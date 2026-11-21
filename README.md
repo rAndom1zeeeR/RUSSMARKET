@@ -99,4 +99,17 @@ prisma/             schema.prisma, migrations, seed.ts, data/ (файл БД, н
 | `PUT /api/schedules/:id/shifts`   | сохранение разницы `{ upserts, deletes }` |
 | `POST /api/schedules/:id/publish` | публикация графика                        |
 
+## База данных
+
+SQLite выбрана осознанно: проверяющему не нужен сервер БД, файл лежит в проекте (но не в git), сидер воспроизводит данные.
+Код готов к переезду на PostgreSQL: весь доступ идёт через Prisma, сырого SQL нет, БД трогает только `src/server`,
+сохранение — одна транзакция. Для миграции нужно:
+
+1. в `prisma/schema.prisma` заменить `provider = "sqlite"` на `"postgresql"`;
+2. поставить `@prisma/adapter-pg` и `pg`, заменить адаптер в `src/server/db.ts` и `prisma/seed.ts`;
+3. указать `DATABASE_URL="postgresql://…"`;
+4. удалить `prisma/migrations` (они на диалекте SQLite), выполнить `prisma migrate dev --name init` и `pnpm db:seed`.
+
+Эти шаги на PostgreSQL не запускались. Даты и время хранятся строками (`YYYY-MM-DD`, `HH:mm`) — при желании их можно перевести в `Date` / `Time`.
+
 Подробный план и допущения — в [PLAN.md](PLAN.md).
