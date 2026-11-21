@@ -3,13 +3,6 @@ import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 import { addDays, format, startOfWeek } from "date-fns";
 import { PrismaClient } from "../src/generated/prisma/client";
 
-if (existsSync(".env")) process.loadEnvFile(".env");
-
-const adapter = new PrismaBetterSqlite3({
-  url: process.env.DATABASE_URL ?? "file:./prisma/data/dev.db",
-});
-const prisma = new PrismaClient({ adapter });
-
 const SCHEDULE_ID = "main";
 
 const TEMPLATES = [
@@ -53,10 +46,10 @@ const SHIFTS: Cell[] = [
   tpl("emp-5", 4, "tpl-day"),
 ];
 
-async function main() {
+export async function seedDatabase(client: PrismaClient): Promise<void> {
   const monday = startOfWeek(new Date(), { weekStartsOn: 1 });
 
-  await prisma.$transaction(async tx => {
+  await client.$transaction(async tx => {
     await tx.shift.deleteMany();
     await tx.schedule.deleteMany();
     await tx.shiftTemplate.deleteMany();
@@ -88,9 +81,29 @@ async function main() {
   console.log(`Seed: ${EMPLOYEES.length} сотрудников, ${TEMPLATES.length} шаблона, ${SHIFTS.length} смен`);
 }
 
-main()
-  .catch((error: unknown) => {
+async function main(): Promise<void> {
+  if (existsSync(".env")) process.loadEnvFile(".env");
+  const adapter = new PrismaBetterSqlite3({
+    url: process.env.DATABASE_URL ?? "file:./prisma/data/dev.db",
+  });
+  const prisma = new PrismaClient({ adapter });
+  try {
+    await seedDatabase(prisma);
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
+const invokedDirectly = process.argv.some(arg => {
+  const normalized = arg.replaceAll("\\", "/");
+  return (
+    normalized === "prisma/seed.ts" || normalized.endsWith("/prisma/seed.ts") || normalized.endsWith("/prisma/seed.js")
+  );
+});
+
+if (invokedDirectly) {
+  main().catch((error: unknown) => {
     console.error(error);
     process.exitCode = 1;
-  })
-  .finally(() => prisma.$disconnect());
+  });
+}

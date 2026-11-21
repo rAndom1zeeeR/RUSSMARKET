@@ -58,7 +58,7 @@ Production-сборка — Next.js standalone (`output: "standalone"` в `next.
 
 SQLite — volume `app-data`, смонтированный в `/data`. В контейнере `DATABASE_URL=file:/data/app.db` (значение из `.env` compose перебивает). Реплика одна: второй процесс портит файл. Не подменяйте `DATABASE_URL` на `file:./prisma/data/dev.db` — этот путь пропадает при редеплое. Сеть `dokploy-network` внешняя.
 
-Раннер не содержит Prisma CLI и каталог `prisma/migrations`: при старте контейнера миграции и сидер не выполняются. Пустой volume — файл БД без таблиц.
+`prisma generate` выполняется при сборке образа. При первом старте контейнера (`INIT_DB=1`) сервер сам применяет `prisma/migrations` и сидер, затем пишет маркер `/data/.initialized`. Повторный старт и редеплой маркер видят и данные не трогают. Чистая база — новый volume (удалить и файл, и маркер).
 
 ## Возможности
 

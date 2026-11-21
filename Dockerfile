@@ -26,23 +26,26 @@ ENV DATABASE_URL=file:/tmp/build.db
 RUN pnpm exec prisma generate && pnpm build
 
 FROM node:22-alpine AS runner
-RUN apk add --no-cache dumb-init wget \
+RUN apk add --no-cache dumb-init su-exec wget \
   && addgroup -g 1001 -S nodejs \
   && adduser -S nextjs -u 1001 -G nodejs
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV HOSTNAME=0.0.0.0
 ENV DATABASE_URL=file:/data/app.db
+# First boot only: instrumentation applies migrations and the seed, then writes /data/.initialized.
+ENV INIT_DB=1
 
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
-
-USER nextjs
+COPY --from=builder --chown=nextjs:nodejs /app/prisma/migrations ./prisma/migrations
+COPY docker/entrypoint.sh /entrypoint.sh
+RUN sed -i 's/\r$//' /entrypoint.sh && chmod +x /entrypoint.sh
 
 EXPOSE 3000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=5 CMD sh -c "wget -qO- http://127.0.0.1:3000/ || exit 1"
 
-ENTRYPOINT ["dumb-init", "--"]
+ENTRYPOINT ["dumb-init", "--", "/entrypoint.sh"]
 CMD ["node", "server.js"]

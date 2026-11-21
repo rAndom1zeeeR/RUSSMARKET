@@ -261,6 +261,12 @@
       }
     },
     {
+      "files": ["src/server/ensure-db.ts"],
+      "rules": {
+        "security/detect-non-literal-fs-filename": "off"
+      }
+    },
+    {
       "files": ["src/features/schedule-grid/ui/schedule-grid.tsx"],
       "rules": {
         "react/incompatible-library": "off"
