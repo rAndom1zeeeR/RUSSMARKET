@@ -5,7 +5,7 @@ import Database from "better-sqlite3";
 import { PrismaClient } from "@/generated/prisma/client";
 import { seedDatabase } from "../../prisma/seed";
 
-const MARKER = ".initialized";
+const DEFAULT_URL = "file:./prisma/data/dev.db";
 
 // ponytail: standalone image has no Prisma CLI, so the first boot applies prisma/migrations
 // with better-sqlite3 and then seeds. Ceiling: sqlite `file:` URLs and one replica.
@@ -24,7 +24,27 @@ function databaseFile(databaseUrl: string): string {
 }
 
 function markerPath(file: string): string {
-  return path.join(path.dirname(path.resolve(file)), MARKER);
+  return `${path.resolve(file)}.initialized`;
+}
+
+function countOf(row: unknown): number {
+  if (typeof row !== "object" || row === null || !("n" in row)) return 0;
+  if (typeof row.n === "number") return row.n;
+  if (typeof row.n === "bigint") return Number(row.n);
+  return 0;
+}
+
+function scheduleState(file: string): { table: boolean; count: number } {
+  if (!existsSync(file)) return { table: false, count: 0 };
+  const sqlite = new Database(file, { readonly: true, fileMustExist: true });
+  try {
+    const table = sqlite.prepare("SELECT 1 AS ok FROM sqlite_master WHERE type = 'table' AND name = 'Schedule'").get();
+    if (!table) return { table: false, count: 0 };
+    const row = sqlite.prepare("SELECT COUNT(*) AS n FROM Schedule").get();
+    return { table: true, count: countOf(row) };
+  } finally {
+    sqlite.close();
+  }
 }
 
 function migrationNames(row: unknown): string | null {
@@ -62,19 +82,29 @@ function applyMigrations(file: string): void {
 }
 
 /**
- * First production boot (`INIT_DB=1`, no marker next to the database file):
- * apply migrations and seed. Later boots, including redeploys of the same volume, return immediately.
+ * Production boot. Seeds only when this database file has no schedules yet and no marker.
+ * A marker with an existing Schedule table means "already initialized" — deleting every
+ * schedule in the UI must not bring the seed back on the next deploy.
  */
 export async function ensureDatabase(databaseUrl?: string): Promise<void> {
-  if (process.env.INIT_DB !== "1") return;
+  if (process.env.NODE_ENV !== "production") return;
 
-  const url = databaseUrl ?? process.env.DATABASE_URL;
-  if (!url) throw new Error("DATABASE_URL is not set");
-
+  const url = databaseUrl ?? process.env.DATABASE_URL ?? DEFAULT_URL;
   const file = databaseFile(url);
   const marker = markerPath(file);
-  if (existsSync(marker)) return;
+  const state = scheduleState(file);
 
+  if (state.count > 0) {
+    if (!existsSync(marker)) writeFileSync(marker, `${new Date().toISOString()}\n`);
+    console.log(`[db] ${url} already has ${state.count} schedules`);
+    return;
+  }
+  if (state.table && existsSync(marker)) {
+    console.log(`[db] ${url} initialized earlier, skip seed`);
+    return;
+  }
+
+  console.log(`[db] migrating and seeding ${url}`);
   applyMigrations(file);
 
   const prisma = new PrismaClient({ adapter: new PrismaBetterSqlite3({ url }) });
@@ -85,4 +115,5 @@ export async function ensureDatabase(databaseUrl?: string): Promise<void> {
   }
 
   writeFileSync(marker, `${new Date().toISOString()}\n`);
+  console.log(`[db] seeded ${url}`);
 }

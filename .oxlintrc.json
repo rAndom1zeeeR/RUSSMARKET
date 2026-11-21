@@ -255,7 +255,7 @@
       }
     },
     {
-      "files": ["prisma/seed.ts"],
+      "files": ["prisma/seed.ts", "src/server/ensure-db.ts"],
       "rules": {
         "no-console": "off"
       }

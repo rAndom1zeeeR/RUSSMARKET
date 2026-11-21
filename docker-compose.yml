@@ -14,8 +14,6 @@ services:
         required: false
     environment:
       DATABASE_URL: file:/data/app.db
-      # First start migrates and seeds. Marker /data/.initialized on the volume blocks every later boot.
-      INIT_DB: "1"
       NODE_ENV: ${NODE_ENV:-production}
       PORT: ${PORT:-3000}
     volumes:

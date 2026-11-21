@@ -33,8 +33,6 @@ WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV HOSTNAME=0.0.0.0
 ENV DATABASE_URL=file:/data/app.db
-# First boot only: instrumentation applies migrations and the seed, then writes /data/.initialized.
-ENV INIT_DB=1
 
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static

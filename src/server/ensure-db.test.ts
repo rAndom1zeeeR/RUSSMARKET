@@ -25,45 +25,43 @@ async function scheduleCount(url: string): Promise<number> {
   }
 }
 
+function setNodeEnv(value: string | undefined): void {
+  if (value === undefined) {
+    Reflect.deleteProperty(process.env, "NODE_ENV");
+    return;
+  }
+  Reflect.set(process.env, "NODE_ENV", value);
+}
+
 describe("ensureDatabase", () => {
-  const previous = process.env.INIT_DB;
+  const previousNodeEnv = process.env.NODE_ENV;
 
   afterEach(() => {
-    if (previous === undefined) delete process.env.INIT_DB;
-    else process.env.INIT_DB = previous;
+    setNodeEnv(previousNodeEnv);
     for (const directory of directories.splice(0)) {
       rmSync(directory, { recursive: true, force: true });
     }
   });
 
-  it("без INIT_DB ничего не создаёт", async () => {
-    delete process.env.INIT_DB;
+  it("вне production ничего не создаёт", async () => {
+    setNodeEnv("development");
     const url = tempUrl();
     await ensureDatabase(url);
     expect(existsSync(url.slice("file:".length))).toBe(false);
   });
 
-  it("без DATABASE_URL падает", async () => {
-    process.env.INIT_DB = "1";
-    const saved = process.env.DATABASE_URL;
-    delete process.env.DATABASE_URL;
-    try {
-      await expect(ensureDatabase()).rejects.toThrow("DATABASE_URL is not set");
-    } finally {
-      if (saved === undefined) delete process.env.DATABASE_URL;
-      else process.env.DATABASE_URL = saved;
-    }
-  });
-
   it("отклоняет не-sqlite URL", async () => {
-    process.env.INIT_DB = "1";
+    setNodeEnv("production");
     await expect(ensureDatabase("postgres://localhost/app")).rejects.toThrow("sqlite file URL");
   });
 
   it("первый запуск накатывает миграции и сидер, повторный данные не трогает", async () => {
-    process.env.INIT_DB = "1";
+    setNodeEnv("production");
     const url = tempUrl();
     const file = url.slice("file:".length);
+
+    await ensureDatabase(url);
+    expect(await scheduleCount(url)).toBe(1);
 
     await ensureDatabase(url);
     expect(await scheduleCount(url)).toBe(1);
@@ -71,12 +69,11 @@ describe("ensureDatabase", () => {
     const sqlite = new Database(file);
     sqlite.prepare('DELETE FROM "Schedule"').run();
     sqlite.close();
-    expect(await scheduleCount(url)).toBe(0);
 
     await ensureDatabase(url);
     expect(await scheduleCount(url)).toBe(0);
 
-    unlinkSync(path.join(path.dirname(path.resolve(file)), ".initialized"));
+    unlinkSync(`${path.resolve(file)}.initialized`);
     await ensureDatabase(url);
     expect(await scheduleCount(url)).toBe(1);
   });
